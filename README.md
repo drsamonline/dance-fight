@@ -1,31 +1,33 @@
-<div align="center">
+<h1 align="center">Dance Fight</h1>
 
-# Dance Fight
+<p align="center"><strong>Every fight move is a dance move.</strong></p>
 
-**Every fight move is a dance move.**
+<p align="center">
+  Load a track from your device and the character dances to it. The beat is analysed up front,
+  the whole arena pulses on the pulse, and every attack you throw is a dance move — land it in
+  time with the music and it becomes a <strong>PERFECT</strong> hit worth 60% extra damage.
+</p>
 
-Load a track from your device and the character dances to it. The beat is analysed up front,
-the whole arena pulses on the pulse, and every attack you throw is a dance move — land it in
-time with the music and it becomes a **PERFECT** hit worth 60% extra damage.
+<p align="center">
+  <a href="https://drsamonline.github.io/dance-fight/"><img src="https://img.shields.io/badge/play-now-ff4fd8" alt="Play now"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/drsamonline/dance-fight" alt="License: MIT"></a>
+  <a href="https://github.com/drsamonline/dance-fight/stargazers"><img src="https://img.shields.io/github/stars/drsamonline/dance-fight" alt="Stars"></a>
+  <a href="https://github.com/drsamonline/dance-fight/commits/main"><img src="https://img.shields.io/github/last-commit/drsamonline/dance-fight" alt="Last commit"></a>
+</p>
 
-[![Play now](https://img.shields.io/badge/play-now-ff4fd8
-[![License](https://img.shields.io/github/license/drsamonline/dance-fight
-[![Stars](https://img.shields.io/github/stars/drsamonline/dance-fight
-[![Last commit](https://img.shields.io/github/last-commit/drsamonline/dance-fight
+<p align="center">
+  <img src="https://img.shields.io/badge/dependencies-0-37e6ff" alt="Dependencies: 0">
+  <img src="https://img.shields.io/badge/build-none-ffd23f" alt="Build: none">
+  <img src="https://img.shields.io/badge/vanilla-JS-ffd23f" alt="Vanilla JS">
+  <img src="https://img.shields.io/badge/Web_Audio-API-7b2cff" alt="Web Audio API">
+  <img src="https://img.shields.io/badge/beat_sync-offline_grid-ff4fd8" alt="Offline beat grid">
+  <img src="https://img.shields.io/badge/mobile-touch_ready-37e6ff" alt="Touch ready">
+  <img src="https://img.shields.io/badge/PRs-welcome-ffd23f" alt="PRs welcome">
+</p>
 
-[![Dependencies](https://img.shields.io/badge/dependencies-0-37e6ff
-[![Build](https://img.shields.io/badge/build-none-ffd23f
-[![Vanilla JS](https://img.shields.io/badge/vanilla-JS-ffd23f
-[![Web Audio](https://img.shields.io/badge/Web_Audio-API-7b2cff
-[![Beat sync](https://img.shields.io/badge/beat_sync-offline_grid-ff4fd8
-[![Mobile](https://img.shields.io/badge/mobile-touch_ready-37e6ff
-[![PRs](https://img.shields.io/badge/PRs-welcome-ffd23f
+<h3 align="center">▶ <a href="https://drsamonline.github.io/dance-fight/">Play it in your browser</a></h3>
 
-### ▶ [Play it in your browser](https://drsamonline.github.io/dance-fight/)
-
-![Dance Fight](screenshot.jpg)
-
-</div>
+<p align="center"><img src="screenshot.jpg" alt="Dance Fight gameplay" width="840"></p>
 
 ---
 
@@ -134,12 +136,9 @@ Being straight about what this is and isn't:
 
 ---
 
-<div align="center">
+<h2 align="center">License</h2>
 
-## License
-
-[MIT](LICENSE) © Dr Sohil Momin
-
-Built as a single HTML file. Fork it, remix it, drop your own track in.
-
-</div>
+<p align="center">
+  <a href="LICENSE">MIT</a> © Dr Sohil Momin<br>
+  Built as a single HTML file. Fork it, remix it, drop your own track in.
+</p>
