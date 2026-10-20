@@ -1,14 +1,31 @@
+<div align="center">
+
 # Dance Fight
 
 **Every fight move is a dance move.**
 
-Load a track from your device and the character dances to it. The beat is analysed up front, the whole
-arena pulses on the pulse, and every attack you throw is a dance move — land it in time with the music
-and it becomes a **PERFECT** hit worth 60% extra damage.
+Load a track from your device and the character dances to it. The beat is analysed up front,
+the whole arena pulses on the pulse, and every attack you throw is a dance move — land it in
+time with the music and it becomes a **PERFECT** hit worth 60% extra damage.
+
+[![Play now](https://img.shields.io/badge/play-now-ff4fd8
+[![License](https://img.shields.io/github/license/drsamonline/dance-fight
+[![Stars](https://img.shields.io/github/stars/drsamonline/dance-fight
+[![Last commit](https://img.shields.io/github/last-commit/drsamonline/dance-fight
+
+[![Dependencies](https://img.shields.io/badge/dependencies-0-37e6ff
+[![Build](https://img.shields.io/badge/build-none-ffd23f
+[![Vanilla JS](https://img.shields.io/badge/vanilla-JS-ffd23f
+[![Web Audio](https://img.shields.io/badge/Web_Audio-API-7b2cff
+[![Beat sync](https://img.shields.io/badge/beat_sync-offline_grid-ff4fd8
+[![Mobile](https://img.shields.io/badge/mobile-touch_ready-37e6ff
+[![PRs](https://img.shields.io/badge/PRs-welcome-ffd23f
 
 ### ▶ [Play it in your browser](https://drsamonline.github.io/dance-fight/)
 
 ![Dance Fight](screenshot.jpg)
+
+</div>
 
 ---
 
@@ -22,12 +39,24 @@ index.html    # the entire game — HTML, CSS, JS, ~78 KB
 
 Open it, pick a song, fight. It works offline and from `file://` too.
 
+### Highlights
+
+- **The music drives everything.** Your track is analysed for its real beat grid, and the character's
+  dance is locked to the audio playhead — so it can't drift, and it doesn't depend on frame rate.
+- **Every move is a dance move.** Arm Wave, Spinning Kick, Body-Roll Uppercut and a 720° Body-Roll
+  Finisher. Spins are real rotations, not pose swaps.
+- **The character never stops dancing.** Attack poses are layered *over* the ongoing groove rather than
+  replacing it.
+- **Rhythm is the combat system.** Moves landed on the beat hit 60% harder and build a bigger combo.
+  Shuffle-stepping in time charges your finisher meter.
+- **Keyboard and touch.** On-screen controls appear automatically on phones.
+- **One file, zero dependencies.** No framework, no bundler, no CDN.
+
 ---
 
 ## How to play
 
-Pick an audio file (or just press Start and it plays a default 128 BPM groove). Every move you throw is
-a dance move, and the character never stops dancing underneath it.
+Pick an audio file (or just press Start and it plays a default 128 BPM groove).
 
 | Key | Move | Notes |
 | --- | --- | --- |
@@ -105,6 +134,12 @@ Being straight about what this is and isn't:
 
 ---
 
+<div align="center">
+
 ## License
 
 [MIT](LICENSE) © Dr Sohil Momin
+
+Built as a single HTML file. Fork it, remix it, drop your own track in.
+
+</div>
