@@ -22,7 +22,6 @@
 
 ---
 
-<h1 align="center">Dance Fight</h1>
 
 <p align="center"><strong>Every fight move is a dance move.</strong></p>
 
@@ -33,7 +32,7 @@
 </p>
 
 <p align="center">
-  <a href="https://drsamonline.github.io/dance-fight/"><img src="https://img.shields.io/badge/play-now-ff4fd8" alt="Play now"></a>
+  <a href="https://drsamonline.github.io/dance-fight/play/"><img src="https://img.shields.io/badge/play-now-ff4fd8" alt="Play now"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/drsamonline/dance-fight" alt="License: MIT"></a>
   <a href="https://github.com/drsamonline/dance-fight/stargazers"><img src="https://img.shields.io/github/stars/drsamonline/dance-fight" alt="Stars"></a>
   <a href="https://github.com/drsamonline/dance-fight/commits/main"><img src="https://img.shields.io/github/last-commit/drsamonline/dance-fight" alt="Last commit"></a>
@@ -49,7 +48,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-ffd23f" alt="PRs welcome">
 </p>
 
-<h3 align="center">▶ <a href="https://drsamonline.github.io/dance-fight/">Play it in your browser</a></h3>
+<h3 align="center">▶ <a href="https://drsamonline.github.io/dance-fight/play/">Play it in your browser</a></h3>
 
 <p align="center"><img src="screenshot.jpg" alt="Dance Fight gameplay" width="840"></p>
 
