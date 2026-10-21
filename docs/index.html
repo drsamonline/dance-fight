@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dance Fight — a rhythm game where every fight move is a dance move</title>
+<meta name="description" content="Dance Fight is a free single-file browser rhythm game: load your own track, the beat is analysed up front, and every attack you throw is a dance move. Land moves on the beat for PERFECT hits worth 60% extra damage." />
+<meta name="keywords" content="dance fight, rhythm game, browser game, beat sync, Web Audio API, music game, rhythm combat, vanilla JS game, single file game, no dependencies, Dr Sohil Momin" />
+<meta name="author" content="Dr. Sohil Momin" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="theme-color" content="#ec4899" />
+<link rel="canonical" href="https://drsamonline.github.io/dance-fight/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Dance Fight" />
+<meta property="og:title" content="Dance Fight — every fight move is a dance move" />
+<meta property="og:description" content="A single-file browser rhythm game. Load your track, the beat is analysed up front, and every attack is a dance move. Land on the beat for PERFECT hits worth 60% extra damage." />
+<meta property="og:url" content="https://drsamonline.github.io/dance-fight/" />
+<meta property="og:image" content="https://socialify.git.ci/drsamonline/dance-fight/image?name=1&amp;owner=1&amp;description=1&amp;language=1&amp;theme=Dark&amp;font=Inter" />
+<meta property="og:image:width" content="1280" />
+<meta property="og:image:height" content="640" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Dance Fight — every fight move is a dance move" />
+<meta name="twitter:description" content="A single-file browser rhythm game. Every attack is a dance move. Land on the beat for PERFECT hits worth 60% extra damage." />
+<meta name="twitter:image" content="https://socialify.git.ci/drsamonline/dance-fight/image?name=1&amp;owner=1&amp;description=1&amp;language=1&amp;theme=Dark&amp;font=Inter" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ec4899'/%3E%3Crect x='7' y='14' width='4' height='12' rx='2' fill='%23fff'/%3E%3Crect x='14' y='7' width='4' height='19' rx='2' fill='%23fff'/%3E%3Crect x='21' y='11' width='4' height='15' rx='2' fill='%23fff'/%3E%3C/svg%3E" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Dance Fight",
+  "alternateName": "DANCE FIGHT — every move is a dance move",
+  "description": "A single-file browser rhythm game. Load an audio track and the character dances to it; the beat is analysed up front and every attack is a dance move. Moves landed on the beat hit 60% harder as PERFECT hits.",
+  "url": "https://drsamonline.github.io/dance-fight/",
+  "image": "https://socialify.git.ci/drsamonline/dance-fight/image?name=1&owner=1&description=1&language=1&theme=Dark&font=Inter",
+  "applicationCategory": "Game",
+  "genre": ["Rhythm", "Music", "Fighting", "Action"],
+  "gamePlatform": ["Web browser", "Desktop", "Mobile"],
+  "operatingSystem": "Any (web browser)",
+  "playMode": "SinglePlayer",
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "author": { "@type": "Person", "name": "Dr. Sohil Momin" },
+  "license": "https://github.com/drsamonline/dance-fight/blob/main/LICENSE",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "codeRepository": "https://github.com/drsamonline/dance-fight"
+}
+</script>
+
+<style>
+  :root{
+    --pink:#ec4899;
+    --purple:#7c3aed;
+    --magenta:#ff2ea6;
+    --electric:#22d3ee;
+    --lime:#a3e635;
+    --gold:#fbbf24;
+    --ink:#0b0416;
+    --ink2:#160a2b;
+    --panel:rgba(255,255,255,.055);
+    --panel-brd:rgba(255,255,255,.14);
+    --text:#f7f2ff;
+    --muted:#c7b8e6;
+    --display:"Impact","Haettenschweiler","Arial Narrow Bold","Franklin Gothic Medium",system-ui,sans-serif;
+    --body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --maxw:1120px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:var(--body);
+    color:var(--text);
+    background:var(--ink);
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  /* animated party backdrop */
+  .bg{position:fixed;inset:0;z-index:-2;background:
+      radial-gradient(1100px 700px at 12% -8%, rgba(236,72,153,.42), transparent 60%),
+      radial-gradient(1000px 640px at 88% 4%, rgba(124,58,237,.46), transparent 60%),
+      radial-gradient(900px 700px at 50% 108%, rgba(34,211,238,.20), transparent 62%),
+      linear-gradient(160deg,#0b0416 0%,#150726 48%,#0a0314 100%);
+  }
+  .grid{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;
+    background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+    background-size:44px 44px;
+    mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 78%);
+    -webkit-mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 78%);
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  a{color:inherit}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:400;text-transform:uppercase;letter-spacing:.5px;line-height:.98}
+  section{scroll-margin-top:84px}
+
+  /* ---------- sticky nav ---------- */
+  .nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    background:linear-gradient(90deg,rgba(236,72,153,.16),rgba(124,58,237,.16));
+    border-bottom:1px solid rgba(255,255,255,.12);}
+  .nav .wrap{display:flex;align-items:center;gap:18px;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex:0 0 auto}
+  .brand b{font-family:var(--display);font-size:22px;letter-spacing:1px;text-transform:uppercase;
+    background:linear-gradient(90deg,#fff,#ffd6ef);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand .eq{display:flex;align-items:flex-end;gap:2px;height:20px}
+  .brand .eq i{width:3px;background:linear-gradient(180deg,var(--electric),var(--pink));border-radius:2px;display:block;height:40%}
+  .nav-links{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  .nav-links a{text-decoration:none;font-size:14px;font-weight:600;color:var(--muted);padding:8px 12px;border-radius:9px}
+  .nav-links a:hover{color:#fff;background:rgba(255,255,255,.09)}
+  .nav .cta{flex:0 0 auto;text-decoration:none;font-weight:800;font-size:14px;padding:9px 16px;border-radius:999px;color:#fff;
+    background:linear-gradient(90deg,var(--pink),var(--purple));box-shadow:0 6px 22px rgba(236,72,153,.42);white-space:nowrap}
+  .nav .cta:hover{filter:brightness(1.12)}
+  .menu-btn{display:none;margin-left:auto;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+    color:#fff;border-radius:10px;padding:8px 11px;font-size:18px;line-height:1;cursor:pointer}
+
+  /* ---------- hero ---------- */
+  .hero{padding:74px 0 40px;position:relative}
+  .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+    color:#ffd6ef;background:rgba(236,72,153,.16);border:1px solid rgba(236,72,153,.5);padding:7px 14px;border-radius:999px}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--electric);box-shadow:0 0 12px var(--electric)}
+  h1.title{font-size:clamp(46px,8.6vw,96px);margin:18px 0 8px;
+    background:linear-gradient(92deg,#fff 0%,#ffc9ec 32%,var(--pink) 58%,var(--purple) 92%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 60px rgba(236,72,153,.25)}
+  .tagline{font-family:var(--display);font-size:clamp(18px,2.6vw,27px);letter-spacing:2px;color:var(--electric);margin:0 0 16px;text-transform:uppercase}
+  .lead{font-size:18px;color:var(--muted);max-width:56ch;margin:0 0 26px}
+  .lead strong{color:#fff}
+  .vs{display:inline-flex;align-items:center;gap:12px;margin:0 0 20px;padding:8px 14px;border-radius:14px;
+    background:linear-gradient(90deg,rgba(34,211,238,.14),rgba(236,72,153,.18),rgba(251,191,36,.14));
+    border:1px solid rgba(255,255,255,.16)}
+  .vs .who{font-family:var(--display);letter-spacing:1.5px;font-size:16px}
+  .vs .you{color:#5eead4}
+  .vs .rival{color:#fda4af}
+  .vs .v{font-family:var(--display);font-size:20px;color:var(--gold);transform:skewX(-8deg)}
+  .btns{display:flex;flex-wrap:wrap;gap:14px}
+  .btn{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;font-size:15.5px;padding:14px 24px;border-radius:999px;border:1px solid transparent}
+  .btn svg{width:19px;height:19px}
+  .btn.primary{color:#fff;background:linear-gradient(90deg,var(--pink),var(--purple));box-shadow:0 10px 30px rgba(124,58,237,.45)}
+  .btn.primary:hover{filter:brightness(1.12);transform:translateY(-2px)}
+  .btn.ghost{color:#fff;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.24)}
+  .btn.ghost:hover{background:rgba(255,255,255,.13)}
+  .btn{transition:transform .18s ease,filter .18s ease,background .18s ease}
+
+  /* hero art: equaliser + pulse rings */
+  .art{position:relative;height:340px;display:flex;align-items:center;justify-content:center}
+  .rings{position:absolute;inset:0;display:grid;place-items:center}
+  .ring{position:absolute;width:200px;height:200px;border-radius:50%;border:2px solid rgba(236,72,153,.55);opacity:0}
+  .ring:nth-child(2){border-color:rgba(124,58,237,.6)}
+  .ring:nth-child(3){border-color:rgba(34,211,238,.55)}
+  .core{position:relative;z-index:2;width:150px;height:150px;border-radius:50%;
+    background:linear-gradient(135deg,var(--pink),var(--purple));
+    box-shadow:0 0 60px rgba(236,72,153,.6),inset 0 0 40px rgba(255,255,255,.25);
+    display:grid;place-items:center;color:#fff}
+  .core svg{width:64px;height:64px}
+  .eqbig{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;align-items:flex-end;gap:6px;height:92px}
+  .eqbig span{width:9px;border-radius:5px 5px 3px 3px;background:linear-gradient(180deg,var(--electric),var(--pink));height:30%}
+
+  /* ---------- generic section ---------- */
+  .sec{padding:66px 0}
+  .sec-head{max-width:760px;margin-bottom:34px}
+  .kicker{font-family:var(--display);letter-spacing:3px;font-size:14px;color:var(--electric);text-transform:uppercase;margin:0 0 10px}
+  h2{font-size:clamp(30px,5vw,52px);margin:0 0 12px;
+    background:linear-gradient(92deg,#fff,#ffc9ec 45%,var(--pink) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sec-head p{color:var(--muted);font-size:17px;margin:0}
+
+  /* ---------- cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .card{position:relative;padding:24px 22px;border-radius:18px;background:var(--panel);border:1px solid var(--panel-brd);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;transition:transform .2s ease,border-color .2s ease}
+  .card:hover{transform:translateY(-4px);border-color:rgba(236,72,153,.6)}
+  .card::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,var(--pink),var(--purple))}
+  .card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px;
+    background:linear-gradient(135deg,rgba(236,72,153,.28),rgba(124,58,237,.28));border:1px solid rgba(255,255,255,.18)}
+  .card .ic svg{width:23px;height:23px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .card h3{font-size:20px;letter-spacing:.6px;margin:0 0 8px;color:#fff;text-transform:uppercase}
+  .card p{margin:0;color:var(--muted);font-size:15px}
+
+  /* ---------- controls table ---------- */
+  .how{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+  .panel{padding:24px;border-radius:18px;background:var(--panel);border:1px solid var(--panel-brd)}
+  .panel h3{font-size:22px;margin:0 0 14px;color:#fff}
+  .keys{width:100%;border-collapse:collapse;font-size:15px}
+  .keys td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.09);vertical-align:top}
+  .keys tr:last-child td{border-bottom:0}
+  .keys td:first-child{width:96px;white-space:nowrap}
+  kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;font-weight:700;color:#fff;
+    background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.28);border-bottom-width:2px;border-radius:7px;padding:3px 7px;display:inline-block}
+  .keys .mv{font-weight:800;color:#fff}
+  .keys .nt{color:var(--muted);font-size:13.5px}
+  .steps{list-style:none;margin:0;padding:0;counter-reset:s}
+  .steps li{position:relative;padding:0 0 16px 46px;counter-increment:s;color:var(--muted);font-size:15px}
+  .steps li:last-child{padding-bottom:0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:9px;
+    display:grid;place-items:center;font-family:var(--display);font-size:15px;color:#fff;
+    background:linear-gradient(135deg,var(--pink),var(--purple))}
+  .steps b{color:#fff}
+  .stat-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:20px}
+  .stat{flex:1 1 130px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--panel-brd)}
+  .stat .n{font-family:var(--display);font-size:30px;line-height:1;
+    background:linear-gradient(90deg,var(--electric),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .l{font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-top:4px}
+
+  /* ---------- demo ---------- */
+  .shot{border-radius:20px;overflow:hidden;border:1px solid var(--panel-brd);position:relative;
+    box-shadow:0 30px 70px rgba(124,58,237,.35)}
+  .shot img{display:block;width:100%;height:auto}
+  .shot .play{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,rgba(11,4,22,.15),rgba(11,4,22,.6))}
+  .shot .play a{display:inline-flex;align-items:center;gap:12px;text-decoration:none;font-family:var(--display);letter-spacing:2px;font-size:20px;color:#fff;
+    padding:16px 30px;border-radius:999px;background:linear-gradient(90deg,var(--pink),var(--purple));box-shadow:0 12px 34px rgba(236,72,153,.5)}
+  .shot .play a svg{width:22px;height:22px;fill:#fff}
+  .shot .play a:hover{filter:brightness(1.12)}
+
+  /* ---------- get started ---------- */
+  .start{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  pre{margin:12px 0 0;padding:16px 18px;border-radius:14px;overflow:auto;background:#0a0414;border:1px solid rgba(255,255,255,.14);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#e9d9ff;line-height:1.6}
+  pre .c{color:#8b7bb0}
+  pre .p{color:var(--electric)}
+  .badges{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .badges img{height:20px;display:block}
+  .cssbadge{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;letter-spacing:.6px;
+    padding:5px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;text-transform:uppercase}
+  .cssbadge .d{width:7px;height:7px;border-radius:50%}
+  .cssbadge.pink{border-color:rgba(236,72,153,.6)}.cssbadge.pink .d{background:var(--pink)}
+  .cssbadge.cyan{border-color:rgba(34,211,238,.6)}.cssbadge.cyan .d{background:var(--electric)}
+  .cssbadge.gold{border-color:rgba(251,191,36,.6)}.cssbadge.gold .d{background:var(--gold)}
+  .cssbadge.lime{border-color:rgba(163,230,53,.6)}.cssbadge.lime .d{background:var(--lime)}
+
+  /* ---------- FAQ ---------- */
+  details{border:1px solid var(--panel-brd);border-radius:14px;background:var(--panel);margin-bottom:12px;overflow:hidden}
+  details[open]{border-color:rgba(236,72,153,.55)}
+  summary{cursor:pointer;list-style:none;padding:18px 20px;font-weight:800;font-size:16.5px;color:#fff;display:flex;gap:12px;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary .q{color:var(--pink);font-family:var(--display);font-size:20px}
+  summary .chev{margin-left:auto;transition:transform .2s ease;color:var(--electric)}
+  details[open] summary .chev{transform:rotate(180deg)}
+  details p{margin:0;padding:0 20px 20px 46px;color:var(--muted);font-size:15px}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid rgba(255,255,255,.12);margin-top:40px;padding:44px 0 34px;
+    background:linear-gradient(180deg,transparent,rgba(124,58,237,.10))}
+  .foot{display:flex;flex-wrap:wrap;gap:22px;justify-content:space-between;align-items:center}
+  .foot .fbrand{display:flex;align-items:center;gap:10px}
+  .foot .fbrand b{font-family:var(--display);font-size:20px;letter-spacing:1px;text-transform:uppercase;color:#fff}
+  .foot-links{display:flex;flex-wrap:wrap;gap:18px}
+  .foot-links a{color:var(--muted);text-decoration:none;font-size:14.5px;font-weight:600}
+  .foot-links a:hover{color:#fff}
+  .byline{margin-top:20px;font-size:14px;color:var(--muted);text-align:center}
+  .byline b{color:#fff}
+
+  /* ---------- animation ---------- */
+  @keyframes eq{0%,100%{height:26%}50%{height:100%}}
+  @keyframes pulse{0%{transform:scale(.55);opacity:.85}100%{transform:scale(1.7);opacity:0}}
+  @keyframes floatbg{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+  .brand .eq i,.eqbig span{animation:eq 1s ease-in-out infinite}
+  .brand .eq i:nth-child(1){animation-delay:-.9s}.brand .eq i:nth-child(2){animation-delay:-.5s}
+  .brand .eq i:nth-child(3){animation-delay:-.2s}.brand .eq i:nth-child(4){animation-delay:-.7s}
+  .eqbig span:nth-child(1){animation-delay:-.85s}.eqbig span:nth-child(2){animation-delay:-.4s}
+  .eqbig span:nth-child(3){animation-delay:-.65s}.eqbig span:nth-child(4){animation-delay:-.15s}
+  .eqbig span:nth-child(5){animation-delay:-.5s}.eqbig span:nth-child(6){animation-delay:-.9s}
+  .eqbig span:nth-child(7){animation-delay:-.3s}.eqbig span:nth-child(8){animation-delay:-.75s}
+  .eqbig span:nth-child(9){animation-delay:-.55s}
+  .ring{animation:pulse 3s ease-out infinite}
+  .ring:nth-child(2){animation-delay:1s}
+  .ring:nth-child(3){animation-delay:2s}
+  .core{animation:beatpulse 2s ease-in-out infinite}
+  @keyframes beatpulse{0%,100%{transform:scale(1)}12%{transform:scale(1.07)}24%{transform:scale(1)}}
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+  .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+    .reveal{opacity:1;transform:none}
+    .ring{display:none}
+    .brand .eq i,.eqbig span{height:60%}
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width:900px){
+    .hero .wrap{grid-template-columns:1fr;gap:24px}
+    .art{height:250px;order:-1}
+    .cards{grid-template-columns:repeat(2,1fr)}
+    .how,.start{grid-template-columns:1fr}
+    .nav-links{display:none;position:absolute;top:64px;left:0;right:0;flex-direction:column;padding:12px 18px;
+      background:rgba(15,6,28,.98);border-bottom:1px solid rgba(255,255,255,.14)}
+    .nav-links.open{display:flex}
+    .menu-btn{display:block}
+    .nav .cta{display:none}
+  }
+  @media (max-width:560px){
+    .cards{grid-template-columns:1fr}
+    .hero{padding-top:48px}
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grid" aria-hidden="true"></div>
+
+<!-- ================= NAV ================= -->
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Dance Fight home">
+      <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <b>Dance Fight</b>
+    </a>
+    <button class="menu-btn" id="menuBtn" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+    <nav class="nav-links" id="navLinks" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#controls">Controls</a>
+      <a href="#beatsync">Beat sync</a>
+      <a href="#demo">Demo</a>
+      <a href="#start">Get started</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="cta" href="./play/">Play now</a>
+  </div>
+</header>
+
+<main id="top">
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="pill"><span class="dot" aria-hidden="true"></span>Single file &middot; Zero dependencies &middot; Works offline</span>
+      <h1 class="title">Every fight move<br>is a dance move</h1>
+      <p class="tagline">Rhythm is the combat system</p>
+      <p class="lead">Load a track from your device and the character dances to it. The beat is analysed up front, the whole arena pulses on the pulse, and every attack you throw is a dance move &mdash; land it in time with the music and it becomes a <strong>PERFECT</strong> hit worth <strong>60% extra damage</strong>.</p>
+
+      <div class="vs" aria-label="You versus Rival">
+        <span class="who you">You</span>
+        <span class="v" aria-hidden="true">VS</span>
+        <span class="who rival">Rival</span>
+      </div>
+
+      <div class="btns">
+        <a class="btn primary" href="./play/">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg>
+          Play in your browser
+        </a>
+        <a class="btn ghost" href="https://github.com/drsamonline/dance-fight">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          View source
+        </a>
+      </div>
+    </div>
+
+    <div class="art" aria-hidden="true">
+      <div class="rings"><span class="ring"></span><span class="ring"></span><span class="ring"></span></div>
+      <div class="core">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <div class="eqbig"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURES ================= -->
+<section class="sec" id="features">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="kicker">Why it slaps</p>
+      <h2>Built on the beat</h2>
+      <p>Six things that make Dance Fight what it is &mdash; all straight from the game.</p>
+    </div>
+    <div class="cards">
+      <article class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <h3>The music drives everything</h3>
+        <p>Your track is analysed for its real beat grid, and the character&rsquo;s dance is locked to the audio playhead &mdash; so it can&rsquo;t drift, and it doesn&rsquo;t depend on frame rate.</p>
+      </article>
+      <article class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+        <h3>Every move is a dance move</h3>
+        <p>Arm Wave, Spinning Kick, Body-Roll Uppercut and a 720&deg; Body-Roll Finisher. Spins are real rotations, not pose swaps.</p>
+      </article>
+      <article class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h3>It never stops dancing</h3>
+        <p>Attack poses are layered <em>over</em> the ongoing groove rather than replacing it &mdash; so the character keeps moving while it fights.</p>
+      </article>
+      <article class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+        <h3>Rhythm is the combat system</h3>
+        <p>Moves landed on the beat hit 60% harder and build a bigger combo. Shuffle-stepping in time charges your finisher meter.</p>
+      </article>
+      <article class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 16h8"/></svg></div>
+        <h3>Keyboard and touch</h3>
+        <p>Play on a desktop keyboard, or use the on-screen controls that appear automatically on phones. Rotate to landscape for the full arena.</p>
+      </article>
+      <article class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <h3>One file, zero dependencies</h3>
+        <p>The whole game is a single HTML file (~78&nbsp;KB). No framework, no bundler, no CDN. It works offline and even from <code>file://</code>.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTROLS / HOW IT WORKS ================= -->
+<section class="sec" id="controls">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="kicker">How it works</p>
+      <h2>Controls &amp; the combo game</h2>
+      <p>Pick an audio file, or just press Start and it plays a default 128&nbsp;BPM groove.</p>
+    </div>
+    <div class="how">
+      <div class="panel reveal">
+        <h3>Keybindings</h3>
+        <table class="keys">
+          <tbody>
+            <tr><td><kbd>A</kbd> <kbd>D</kbd></td><td><span class="mv">Shuffle step</span><div class="nt">Dance-walk. Stepping in time charges your finisher meter.</div></td></tr>
+            <tr><td><kbd>W</kbd></td><td><span class="mv">Leap</span><div class="nt">Arabesque.</div></td></tr>
+            <tr><td><kbd>S</kbd></td><td><span class="mv">Dip</span><div class="nt">Guards and dodges &mdash; hold to block.</div></td></tr>
+            <tr><td><kbd>J</kbd></td><td><span class="mv">Arm Wave</span><div class="nt">Fast, low damage.</div></td></tr>
+            <tr><td><kbd>K</kbd></td><td><span class="mv">Spinning Kick</span><div class="nt">Medium &mdash; a full 360&deg; turn.</div></td></tr>
+            <tr><td><kbd>L</kbd></td><td><span class="mv">Body-Roll Uppercut</span><div class="nt">Heavy &mdash; rolls through a full turn.</div></td></tr>
+            <tr><td><kbd>SPACE</kbd></td><td><span class="mv">Body-Roll Finisher</span><div class="nt">Needs a full meter &mdash; a 720&deg; spin.</div></td></tr>
+            <tr><td><kbd>P</kbd></td><td><span class="mv">Pause / resume music</span><div class="nt">Stop the track, keep the fight.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel reveal">
+        <h3>Land on the beat</h3>
+        <ul class="steps">
+          <li><b>Throw a move.</b> Any attack &mdash; Arm Wave, Spinning Kick, Uppercut or Finisher.</li>
+          <li><b>Time it to the music.</b> A move thrown within about 80&nbsp;ms of a beat lands as a <b>PERFECT</b>.</li>
+          <li><b>PERFECT = 1.6&times; damage</b> and a bigger combo multiplier. A gold <b>&middot; ON BEAT</b> tag on the move name tells you when you nailed it.</li>
+          <li><b>Charge the finisher.</b> Shuffle-stepping in time builds your meter &mdash; then unleash the 720&deg; Body-Roll Finisher.</li>
+        </ul>
+        <div class="stat-row">
+          <div class="stat"><div class="n">1.6&times;</div><div class="l">Perfect damage</div></div>
+          <div class="stat"><div class="n">~80ms</div><div class="l">Perfect window</div></div>
+          <div class="stat"><div class="n">128</div><div class="l">Default BPM</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BEAT SYNC ================= -->
+<section class="sec" id="beatsync">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="kicker">Under the hood</p>
+      <h2>How the beat sync works</h2>
+      <p>Polling an <code>AnalyserNode</code> every frame ties beat detection to the render frame rate, which falls apart on a slow device. Dance Fight does it <strong>offline instead</strong>, on the decoded audio buffer, before the fight starts.</p>
+    </div>
+    <div class="how">
+      <div class="panel reveal">
+        <h3>The offline analysis</h3>
+        <ol class="steps">
+          <li><b>Low-pass</b> the signal to ~180&nbsp;Hz with a one-pole filter (kick-drum territory).</li>
+          <li>Build a <b>per-10&nbsp;ms RMS envelope</b>, then take its <b>positive flux</b>.</li>
+          <li><b>Peak-pick</b> onsets against an adaptive threshold.</li>
+          <li><b>Autocorrelate</b> the flux over lags of 0.30&ndash;0.75&nbsp;s to find the tempo, refined to sub-sample accuracy.</li>
+          <li>Search every phase offset for the <b>grid that lines up with the most onset energy</b>.</li>
+        </ol>
+      </div>
+      <div class="panel reveal">
+        <h3>Locked to the playhead</h3>
+        <p style="color:var(--muted);margin:0 0 14px">The result is a beat grid. During play the dance phase is read straight off the audio playhead &mdash; <code>(playhead &minus; phase) / period</code> &mdash; so the groove cannot drift, and it is completely independent of frame rate.</p>
+        <p style="color:var(--muted);margin:0">Everything else is drawn on a forward-kinematic skeleton. Moves are keyframed joint angles blended <em>over</em> the ongoing dance groove rather than replacing it. Spins are faked as a horizontal squash that mirrors past 90&deg;, with near and far limbs swapping, and every attack leaves additive ghost trails of the last few poses &mdash; which is what makes a rotation read as motion.</p>
+        <div class="stat-row">
+          <div class="stat"><div class="n">97%</div><div class="l">Kicks within 30ms</div></div>
+          <div class="stat"><div class="n">5&ndash;9ms</div><div class="l">Median offset</div></div>
+          <div class="stat"><div class="n">100/128/150</div><div class="l">BPM tested</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DEMO ================= -->
+<section class="sec" id="demo">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="kicker">See it move</p>
+      <h2>Straight from the arena</h2>
+      <p>One HTML file, a wide arena, and a character that never stops dancing. Tap through to play it live in your browser.</p>
+    </div>
+    <div class="shot reveal">
+      <img src="assets/screenshot.jpg" alt="Dance Fight gameplay: a character mid-spin in a neon arena with health bars, combo meter and BPM readout" width="1280" height="720" loading="lazy" />
+      <div class="play">
+        <a href="./play/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Play the demo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= GET STARTED ================= -->
+<section class="sec" id="start">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="kicker">Get started</p>
+      <h2>Play it in seconds</h2>
+      <p>No toolchain, no install, no server. Just open it &mdash; or clone it and remix.</p>
+    </div>
+    <div class="start">
+      <div class="panel reveal">
+        <h3>Play right now</h3>
+        <p style="color:var(--muted);margin:0 0 6px">Open the live demo, pick a track, and fight. Browsers block audio until you interact, so your first tap or click unlocks sound.</p>
+        <div class="btns" style="margin-top:16px">
+          <a class="btn primary" href="./play/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg>Launch Dance Fight</a>
+        </div>
+      </div>
+      <div class="panel reveal">
+        <h3>Run it locally</h3>
+        <pre><span class="c"># clone and open</span>
+<span class="p">$</span> git clone https://github.com/drsamonline/dance-fight.git
+<span class="p">$</span> cd dance-fight
+<span class="p">$</span> open index.html   <span class="c"># macOS; xdg-open / start elsewhere</span>
+
+<span class="c"># or serve it</span>
+<span class="p">$</span> python3 -m http.server 8000
+<span class="c"># then visit http://localhost:8000</span></pre>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:26px">
+      <p class="kicker" style="margin-bottom:12px">Live badges</p>
+      <div class="badges">
+        <a href="https://github.com/drsamonline/dance-fight/stargazers"><img src="https://img.shields.io/github/stars/drsamonline/dance-fight?style=flat-square" alt="GitHub stars" onerror="this.style.display='none'"></a>
+        <a href="https://github.com/drsamonline/dance-fight/blob/main/LICENSE"><img src="https://img.shields.io/github/license/drsamonline/dance-fight?style=flat-square" alt="License" onerror="this.style.display='none'"></a>
+        <a href="https://github.com/drsamonline/dance-fight/commits/main"><img src="https://img.shields.io/github/last-commit/drsamonline/dance-fight?style=flat-square" alt="Last commit" onerror="this.style.display='none'"></a>
+        <img src="https://img.shields.io/github/languages/code-size/drsamonline/dance-fight?style=flat-square" alt="Code size" onerror="this.style.display='none'">
+        <img src="https://img.shields.io/badge/dependencies-0-ec4899?style=flat-square" alt="Dependencies: 0" onerror="this.style.display='none'">
+        <img src="https://img.shields.io/badge/build-none-7c3aed?style=flat-square" alt="Build: none" onerror="this.style.display='none'">
+        <img src="https://img.shields.io/badge/Web_Audio-API-22d3ee?style=flat-square" alt="Web Audio API" onerror="this.style.display='none'">
+      </div>
+      <div class="badges" style="margin-top:12px">
+        <span class="cssbadge pink"><span class="d"></span>Rhythm combat</span>
+        <span class="cssbadge cyan"><span class="d"></span>Vanilla JS</span>
+        <span class="cssbadge gold"><span class="d"></span>Zero dependencies</span>
+        <span class="cssbadge lime"><span class="d"></span>Touch ready</span>
+        <span class="cssbadge pink"><span class="d"></span>Offline beat grid</span>
+        <span class="cssbadge cyan"><span class="d"></span>MIT licensed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="sec" id="faq">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="kicker">Good questions</p>
+      <h2>FAQ</h2>
+    </div>
+    <div class="reveal">
+      <details open>
+        <summary><span class="q">Q</span>Do I need to install anything?<span class="chev">&#9662;</span></summary>
+        <p>No. Dance Fight is a single HTML file with zero dependencies &mdash; no build step, no framework, no CDN. Open it in a modern browser and play, and it works offline and from <code>file://</code> too.</p>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>Can I use my own music?<span class="chev">&#9662;</span></summary>
+        <p>Yes. Load an audio file from your device and the game analyses it for its real beat grid. If you just want to start, press Start and it plays a default 128&nbsp;BPM groove.</p>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>Why do I hear nothing at first?<span class="chev">&#9662;</span></summary>
+        <p>Browsers block audio until you interact with the page, so your first tap or click unlocks sound. If you ever hear nothing, a live level meter under the BPM readout shows whether audio is actually flowing &mdash; and a banner appears if it isn&rsquo;t. That meter reads real signal, not a flag.</p>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>How does the timing work?<span class="chev">&#9662;</span></summary>
+        <p>A move thrown within about 80&nbsp;ms of a beat lands as a PERFECT: 1.6&times; damage and a bigger combo multiplier. The gold &middot; ON BEAT tag on the move name tells you when you nailed it. Shuffle-stepping in time charges your finisher meter.</p>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>Does it work on a phone?<span class="chev">&#9662;</span></summary>
+        <p>Yes &mdash; on-screen controls appear automatically. Hold a direction with one thumb and tap attacks with the other. The arena is 16:9, so rotate to landscape; it&rsquo;s playable in portrait but cramped.</p>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>Are the spins and trails frame-rate dependent?<span class="chev">&#9662;</span></summary>
+        <p>No. Beat detection is done offline on the decoded audio buffer, and during play the dance phase is read straight off the audio playhead &mdash; so the groove can&rsquo;t drift and is independent of frame rate. One honest caveat: the geometry, timing and beat grid were verified programmatically, but the feel of the spins and trails in motion was only tested in a headless browser rendering a few frames per second &mdash; that part is the player&rsquo;s call.</p>
+      </details>
+      <details>
+        <summary><span class="q">Q</span>Can I fork and remix it?<span class="chev">&#9662;</span></summary>
+        <p>Absolutely. It&rsquo;s MIT licensed &copy; Dr Sohil Momin. It&rsquo;s a single HTML file, so fork it, remix it, and drop your own track in.</p>
+      </details>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div class="fbrand">
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <b>Dance Fight</b>
+      </div>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="./play/">Play the demo</a>
+        <a href="https://github.com/drsamonline/dance-fight">GitHub repository</a>
+        <a href="https://github.com/drsamonline/dance-fight/blob/main/LICENSE">MIT License</a>
+        <a href="https://github.com/drsamonline/dance-fight/issues">Report an issue</a>
+      </nav>
+    </div>
+    <p class="byline">Every fight move is a dance move. <b>Built by Dr. Sohil Momin</b> &middot; MIT licensed.</p>
+  </div>
+</footer>
+
+<script>
+  // mobile menu
+  (function(){
+    var b=document.getElementById('menuBtn'),n=document.getElementById('navLinks');
+    if(!b||!n)return;
+    b.addEventListener('click',function(){
+      var open=n.classList.toggle('open');
+      b.setAttribute('aria-expanded',open?'true':'false');
+    });
+    n.addEventListener('click',function(e){
+      if(e.target.tagName==='A'){n.classList.remove('open');b.setAttribute('aria-expanded','false');}
+    });
+  })();
+
+  // reveal on scroll (respects reduced motion via CSS)
+  (function(){
+    var els=document.querySelectorAll('.reveal');
+    if(!('IntersectionObserver' in window)){
+      els.forEach(function(el){el.classList.add('in');});return;
+    }
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}
+      });
+    },{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+    els.forEach(function(el){io.observe(el);});
+  })();
+</script>
+</body>
+</html>
