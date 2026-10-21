@@ -1,3 +1,27 @@
+<div align="center">
+
+# Dance Fight
+
+**Every fight move is a dance move.** A single-file browser rhythm game — load your own track, the beat is analysed up front, and every attack you throw is a dance move. Land it in time with the music and it becomes a **PERFECT** hit worth 60% extra damage.
+
+<a href="https://drsamonline.github.io/dance-fight/"><img src="https://img.shields.io/badge/%E2%96%B6_Landing_page-drsamonline.github.io%2Fdance--fight-ec4899?style=for-the-badge" alt="Landing page" onerror="this.style.display='none'"></a>
+<a href="https://drsamonline.github.io/dance-fight/play/"><img src="https://img.shields.io/badge/%F0%9F%8E%AE_Play_the_live_demo-open_in_browser-7c3aed?style=for-the-badge" alt="Play the live demo" onerror="this.style.display='none'"></a>
+
+<a href="https://github.com/drsamonline/dance-fight/stargazers"><img src="https://img.shields.io/github/stars/drsamonline/dance-fight?style=flat-square" alt="Stars" onerror="this.style.display='none'"></a>
+<a href="https://github.com/drsamonline/dance-fight/blob/main/LICENSE"><img src="https://img.shields.io/github/license/drsamonline/dance-fight?style=flat-square" alt="License: MIT" onerror="this.style.display='none'"></a>
+<a href="https://github.com/drsamonline/dance-fight/commits/main"><img src="https://img.shields.io/github/last-commit/drsamonline/dance-fight?style=flat-square" alt="Last commit" onerror="this.style.display='none'"></a>
+<img src="https://img.shields.io/badge/dependencies-0-22d3ee?style=flat-square" alt="Dependencies: 0" onerror="this.style.display='none'">
+<img src="https://img.shields.io/badge/build-none-7c3aed?style=flat-square" alt="Build: none" onerror="this.style.display='none'">
+<img src="https://img.shields.io/badge/vanilla-JS-fbbf24?style=flat-square" alt="Vanilla JS" onerror="this.style.display='none'">
+<img src="https://img.shields.io/badge/Web_Audio-API-22d3ee?style=flat-square" alt="Web Audio API" onerror="this.style.display='none'">
+<img src="https://img.shields.io/badge/mobile-touch_ready-a3e635?style=flat-square" alt="Touch ready" onerror="this.style.display='none'">
+
+**🔗 [Landing page](https://drsamonline.github.io/dance-fight/)** &nbsp;·&nbsp; **🎮 [Play the live demo](https://drsamonline.github.io/dance-fight/play/)** &nbsp;·&nbsp; **[Source](https://github.com/drsamonline/dance-fight)**
+
+</div>
+
+---
+
 <h1 align="center">Dance Fight</h1>
 
 <p align="center"><strong>Every fight move is a dance move.</strong></p>
