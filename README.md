@@ -6,6 +6,7 @@
 
 <a href="https://drsamonline.github.io/dance-fight/"><img src="https://img.shields.io/badge/%E2%96%B6_Landing_page-drsamonline.github.io%2Fdance--fight-ec4899?style=for-the-badge" alt="Landing page" onerror="this.style.display='none'"></a>
 <a href="https://drsamonline.github.io/dance-fight/play/"><img src="https://img.shields.io/badge/%F0%9F%8E%AE_Play_the_live_demo-open_in_browser-7c3aed?style=for-the-badge" alt="Play the live demo" onerror="this.style.display='none'"></a>
+<a href="https://drsamonline.github.io/"><img src="https://img.shields.io/badge/All%20projects-drsamonline.github.io-22d3ee?style=for-the-badge" alt="All projects" onerror="this.style.display='none'"></a>
 
 <a href="https://github.com/drsamonline/dance-fight/stargazers"><img src="https://img.shields.io/github/stars/drsamonline/dance-fight?style=flat-square" alt="Stars" onerror="this.style.display='none'"></a>
 <a href="https://github.com/drsamonline/dance-fight/blob/main/LICENSE"><img src="https://img.shields.io/github/license/drsamonline/dance-fight?style=flat-square" alt="License: MIT" onerror="this.style.display='none'"></a>
