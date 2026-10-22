@@ -18,6 +18,8 @@
 
 **🔗 [Landing page](https://drsamonline.github.io/dance-fight/)** &nbsp;·&nbsp; **🎮 [Play the live demo](https://drsamonline.github.io/dance-fight/play/)** &nbsp;·&nbsp; **[Source](https://github.com/drsamonline/dance-fight)**
 
+**Download:** [Windows (.exe)](https://github.com/drsamonline/dance-fight/releases/latest/download/dance-fight-portable.exe) &nbsp;·&nbsp; [Android (.apk)](https://github.com/drsamonline/dance-fight/releases/latest/download/dance-fight.apk)
+
 </div>
 
 ---
