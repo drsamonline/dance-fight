@@ -2,6 +2,12 @@
 
 # Dance Fight
 
+<!-- shot:start -->
+
+![Screenshot](docs/shot.png)
+
+<!-- shot:end -->
+
 **Every fight move is a dance move.** A single-file browser rhythm game — load your own track, the beat is analysed up front, and every attack you throw is a dance move. Land it in time with the music and it becomes a **PERFECT** hit worth 60% extra damage.
 
 <a href="https://drsamonline.github.io/dance-fight/"><img src="https://img.shields.io/badge/%E2%96%B6_Landing_page-drsamonline.github.io%2Fdance--fight-ec4899?style=for-the-badge" alt="Landing page" onerror="this.style.display='none'"></a>
