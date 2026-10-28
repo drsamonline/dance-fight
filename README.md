@@ -15,7 +15,7 @@
 <a href="https://drsamonline.github.io/"><img src="https://img.shields.io/badge/All%20projects-drsamonline.github.io-22d3ee?style=for-the-badge" alt="All projects" onerror="this.style.display='none'"></a>
 
 <a href="https://github.com/drsamonline/dance-fight/stargazers"><img src="https://img.shields.io/github/stars/drsamonline/dance-fight?style=flat-square" alt="Stars" onerror="this.style.display='none'"></a>
-<a href="https://github.com/drsamonline/dance-fight/blob/main/LICENSE"><img src="https://img.shields.io/github/license/drsamonline/dance-fight?style=flat-square" alt="License: MIT" onerror="this.style.display='none'"></a>
+<a href="https://github.com/drsamonline/dance-fight/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-2e7d32?style=flat-square" alt="License: MIT" onerror="this.style.display='none'"></a>
 <a href="https://github.com/drsamonline/dance-fight/commits/main"><img src="https://img.shields.io/github/last-commit/drsamonline/dance-fight?style=flat-square" alt="Last commit" onerror="this.style.display='none'"></a>
 <img src="https://img.shields.io/badge/dependencies-0-22d3ee?style=flat-square" alt="Dependencies: 0" onerror="this.style.display='none'">
 <img src="https://img.shields.io/badge/build-none-7c3aed?style=flat-square" alt="Build: none" onerror="this.style.display='none'">
@@ -42,7 +42,7 @@
 
 <p align="center">
   <a href="https://drsamonline.github.io/dance-fight/play/"><img src="https://img.shields.io/badge/play-now-ff4fd8" alt="Play now"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/drsamonline/dance-fight" alt="License: MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-2e7d32" alt="License: MIT"></a>
   <a href="https://github.com/drsamonline/dance-fight/stargazers"><img src="https://img.shields.io/github/stars/drsamonline/dance-fight" alt="Stars"></a>
   <a href="https://github.com/drsamonline/dance-fight/commits/main"><img src="https://img.shields.io/github/last-commit/drsamonline/dance-fight" alt="Last commit"></a>
 </p>
