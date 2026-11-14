@@ -2169,6 +2169,11 @@ window.addEventListener("error", function () { window.__bootError = true; });
   input,textarea,select{border-radius:18px !important}
   .card,[class*="card"]{border-radius:22px !important}
   button:not(.ghost):not(.tab){background:var(--acc) !important}
+  /* The repaint above gives every bare button the accent surface. Without a label
+     to match, the button keeps the colour its own rule was written for: dark ink
+     on #b42062 (3.2:1) in light, white on #e5639d (3.2:1) in dark. */
+  html[data-theme="light"] button:not(.ghost):not(.tab){color:#ffffff !important}
+  html[data-theme="dark"] button:not(.ghost):not(.tab){color:#1a0512 !important}
 </style>
 </body>
 </html>
