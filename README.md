@@ -116,7 +116,7 @@ with the other. Landscape fits the whole arena; portrait crops the empty sides a
 instead of shrinking the 16:9 stage into a thumbnail.
 
 **If your hits feel off,** open the start screen and tap **Tap to calibrate** six times along with the
-practice groove. Each tap measures how far it landed from the nearest beat, and the median becomes your
+practice groove (the sound button only drops the volume, so calibration works just as well muted). Each tap measures how far it landed from the nearest beat, and the median becomes your
 offset — the judgement window moves to where *you* hear the beat, which is what Bluetooth headphones and
 slow output latency need. It is stored locally and can also be dragged by hand from −200 to +200 ms.
 
@@ -164,16 +164,19 @@ drawn from the same joint angles the canvas uses. Regenerate it whenever a move 
 
 ## Checks
 
-Two dependency-free gates run against the same single file:
+Three dependency-free gates run against the same single file:
 
 ```bash
 node tools/rig-check.mjs      # skeleton invariants: bone lengths, finite joints, spin direction, stage bounds
+node tools/calib-check.mjs    # calibration maths: the offset window, the median, the clamp, the mute path
 python3 tools/contrast.py     # WCAG ratios for every ink/surface pair the theme block paints
 ```
 
 `rig-check` extracts the pure `RIG-LIB` block from the HTML and runs it in a sandbox — no browser, no
-build, the same verdict every time. `contrast.py` reads the shipped CSS and fails if a label drops under
-AA. Both exit non-zero, so either can gate a commit.
+build, the same verdict every time. `calib-check` lifts the shipped judgement and calibration functions
+out of the page and drives them with a fake audio clock, so an inverted sign, or a mean where a median
+belongs, fails instead of quietly making every hit miss. `contrast.py` reads the shipped CSS and fails if a
+label drops under AA. All three exit non-zero, so any of them can gate a commit.
 
 ---
 

@@ -374,6 +374,9 @@
      AUDIO — file load, playback, live beat detection
      ============================================================ */
   var actx = null, analyser = null, masterGain = null, srcNode = null, audioBuf = null, freq = null;
+  // Muted is a level, not a pause: the audio clock has to keep running so the
+  // beat grid, the dance and the latency calibration all stay live with no sound.
+  var muted = false;
   var playing = false, trackName = "";
   var DEFAULT_BPM = 128;
   var beatGrid = null;      // { period, phase, bpm } from offline analysis of the track
@@ -452,7 +455,7 @@
       freq = new Uint8Array(analyser.frequencyBinCount);
       timeData = new Uint8Array(analyser.fftSize);
       masterGain = actx.createGain();
-      masterGain.gain.value = 1;
+      masterGain.gain.value = muted ? 0 : 1;
       masterGain.connect(analyser);
       analyser.connect(actx.destination);
     }
@@ -706,23 +709,32 @@
     }
     playing = false;
   }
-  function toggleMusic() {
-    if (audioBuf) {
-      if (playing) { stopBuffer(); updateMuteBtn(); }
-      else { unlockAudio().then(function () { playBuffer(); updateMuteBtn(); }); }
-      return;
+  // Muting drops the level on the master bus; it never stops the source.
+  // Stopping playback used to freeze playbackPos(), which silently turned every
+  // calibrated offset into a no-op and made beat-locked play impossible muted.
+  function setMuted(on) {
+    muted = !!on;
+    if (masterGain) masterGain.gain.value = muted ? 0 : 1;
+    if (muted) {
+      // A muted player is not a broken one: don't accuse them of dead audio.
+      soundWarned = false; soundTimer = 0;
+      var sw = document.getElementById("soundWarn");
+      if (sw) sw.classList.remove("on");
     }
-    // No file? Toggle the practice groove instead of doing nothing.
-    if (synth) { stopBuffer(); stopSynth(); updateMuteBtn(); }
-    else { unlockAudio().then(function () { startSynth(settings.bpm); updateMuteBtn(); }); }
+    updateMuteBtn();
+  }
+  function toggleMusic() {
+    if (playing) { setMuted(!muted); return; }
+    // Nothing playing yet: start the track (or the practice groove), sound on.
+    unlockAudio().then(function () {
+      if (audioBuf) playBuffer();
+      else startSynth(settings.bpm);
+      setMuted(false);
+    });
   }
   function updateMuteBtn() {
     var b = document.getElementById("muteBtn");
-    if (b) {
-      if (!audioBuf && !synth) b.textContent = "\u266a NO TRACK";
-      else if (playing) b.textContent = "\u275a\u275a MUSIC";
-      else b.textContent = "\u25b6 MUSIC";
-    }
+    if (b) b.textContent = (playing && muted) ? "\u266a SOUND OFF" : "\u266a SOUND ON";
     var r = document.getElementById("relockBtn");
     if (r) r.classList.toggle("on", !!(audioBuf && playing));
     syncSynthLabel();
@@ -2594,7 +2606,7 @@
     if (hitStop > 0) { hitStop -= dt; dt *= 0.22; }
     T += dt;
 
-    if (playing) {
+    if (playing && !muted) {
       audioLevelNow = audioLevel();
       if (audioLevelNow < 0.0015) {
         soundTimer += dt;
@@ -2604,7 +2616,7 @@
           if (sw) sw.classList.add("on");
         }
       } else { soundTimer = 0; }
-    } else { audioLevelNow = 0; }
+    } else { audioLevelNow = 0; soundTimer = 0; }
 
     if (playing && beatGrid) {
       // Position-locked to the analysed grid: the dance phase is read straight off
@@ -2732,7 +2744,7 @@
 
   function syncSynthLabel() {
     var el = document.getElementById("synthState");
-    if (el) el.textContent = !synth ? "" : (playing ? "playing \u00b7 " + synth.bpm + " BPM" : "paused");
+    if (el) el.textContent = !synth ? "" : (playing ? "playing" + (muted ? " \u00b7 muted" : "") + " \u00b7 " + synth.bpm + " BPM" : "paused");
     var sb = document.getElementById("synthBtn");
     if (sb) sb.textContent = synth ? "Stop" : "Play";
   }

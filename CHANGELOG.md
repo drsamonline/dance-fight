@@ -21,8 +21,12 @@
   shrinking the whole 16:9 stage into the window.
 - **Installable and offline.** A web manifest and a network-first service worker cache the game and its
   icons.
-- **Two dependency-free checks.** `tools/rig-check.mjs` (skeleton invariants extracted from the page) and
-  `tools/contrast.py` (WCAG ratios read from the shipped CSS). Both exit non-zero.
+- **Mute really mutes.** The sound button drops the level on the master bus instead of stopping playback,
+  so muting no longer freezes the beat: the dance, the beat pulse and a calibrated latency offset all keep
+  working with the sound off, and a muted run is no longer reported as "no sound coming through".
+- **Three dependency-free checks.** `tools/rig-check.mjs` (skeleton invariants extracted from the page),
+  `tools/calib-check.mjs` (the shipped calibration and judgement maths driven with a fake clock) and
+  `tools/contrast.py` (WCAG ratios read from the shipped CSS). All three exit non-zero.
 - **README.** The run instructions now point at `docs/play/index.html` (the old `open index.html` opened a
   file that no longer exists), and the finisher has a generated motion strip.
 
