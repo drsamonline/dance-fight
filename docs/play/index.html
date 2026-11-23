@@ -381,6 +381,8 @@
   var DEFAULT_BPM = 128;
   var beatGrid = null;      // { period, phase, bpm } from offline analysis of the track
   var playStartTime = 0;    // actx.currentTime when playback began
+  var playStartAt = 0;      // seconds into the track playback began (a silent intro is skipped)
+  var introSkip = 0;        // seconds of beatless lead-in at the head of the loaded track
   var lastBeatIdx = -9999;
   var loadingTrack = false, pendingPlay = false;
 
@@ -502,6 +504,11 @@
     el.className = cls || "";
   }
 
+  function fmtClock(sec) {
+    var s = Math.max(0, Math.round(sec || 0));
+    return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+  }
+
   function setAnalysisProgress(on, p) {
     var w = document.getElementById("anaWrap"), b = document.getElementById("anaBar");
     if (!w || !b) return;
@@ -511,6 +518,24 @@
 
   // Live output level straight off the analyser. This is what drives the meter
   // and the "no sound" warning, so it reflects real signal, not a flag we set.
+  // What the audio pipeline is actually doing, in one object. The level meter can
+  // only say "no signal"; this says why — a suspended context, no source at all,
+  // or a muted bus — and it is the same snapshot the warning banner reads.
+  function audioState() {
+    return {
+      context: actx ? actx.state : "none",
+      playing: !!playing,
+      muted: !!muted,
+      source: !!(srcNode || synth),
+      gain: masterGain ? masterGain.gain.value : null,
+      bpm: currentBPM(),
+      pos: playbackPos(),
+      grid: beatGrid ? { bpm: beatGrid.bpm, period: beatGrid.period, phase: beatGrid.phase, intro: beatGrid.intro || 0 } : null,
+      level: audioLevelNow
+    };
+  }
+  window.danceFightAudio = audioState;
+
   function audioLevel() {
     if (!analyser || !playing || !timeData) return 0;
     analyser.getByteTimeDomainData(timeData);
@@ -535,17 +560,24 @@
         trackName = file.name;
         setTrackMsg("Analysing the beat of \"" + file.name + "\"\u2026", "");
         beatGrid = null;
+        introSkip = 0;
         stopSynth();
         return analyzeBuffer(buf, setAnalysisProgress.bind(null, true)).then(function (grid) {
           beatGrid = grid;
           beatGridSynthetic = false;
+          introSkip = (grid && grid.intro) || 0;
           setAnalysisProgress(false, 1);
           setTrackMsg("Loaded: " + file.name +
             (grid ? ("  \u00b7  locked at " + grid.bpm + " BPM") : "  \u00b7  no clear pulse \u2014 default groove") +
+            (introSkip ? ("  \u00b7  first beat at " + fmtClock(introSkip)) : "") +
             "  \u00b7  press Start to dance.", "ok");
           loadingTrack = false;
-          // if the fight already started while this was still decoding, roll it in now
-          if (pendingPlay) {
+          // If the arena is already moving \u2014 Start was pressed while this was
+          // decoding, or a groove/previous track is playing \u2014 hand the new buffer
+          // to the bus now. Dropping a track mid-session used to stop the practice
+          // groove and adopt the new grid without ever starting the buffer, so the
+          // fight danced on in silence and unmuting could not bring it back.
+          if (pendingPlay || playing) {
             pendingPlay = false;
             unlockAudio().then(function () { playBuffer(); updateMuteBtn(); });
           }
@@ -662,10 +694,23 @@
         if (ps > bestSum) { bestSum = ps; bestPhase = ph; }
       }
 
+      // A track can open with silence — a count-in, an ambient intro, a long
+      // fade. Note where the first real sound is, so playback can begin there
+      // instead of making the player dance to nothing. The grid itself is still
+      // measured from the start of the buffer; only the playhead skips ahead.
+      var peakEnv = 0;
+      for (h = 0; h < nHops; h++) if (env[h] > peakEnv) peakEnv = env[h];
+      var intro = 0;
+      if (peakEnv > 0) {
+        for (h = 0; h < nHops; h++) { if (env[h] >= peakEnv * 0.15) break; }
+        intro = h * 0.01;
+        if (intro < 0.5) intro = 0;   // a few frames of lead-in is not an intro
+      }
+
       var period = periodSamples * 0.01;
       if (!isFinite(period) || period <= 0) return null;
       report(1);
-      return { period: period, phase: bestPhase * 0.01, bpm: Math.round(60 / period) };
+      return { period: period, phase: bestPhase * 0.01, bpm: Math.round(60 / period), intro: intro };
     } catch (err) {
       return null;
     }
@@ -675,7 +720,7 @@
     if (!playing || !actx) return 0;
     var el = actx.currentTime - playStartTime;
     if (el < 0) el = 0;
-    if (audioBuf) return el % audioBuf.duration;
+    if (audioBuf) return (playStartAt + el) % audioBuf.duration;
     if (synth) return el;          // the practice groove is generated live
     return 0;
   }
@@ -689,7 +734,12 @@
       srcNode.buffer = audioBuf;
       srcNode.loop = true;
       srcNode.connect(masterGain);
-      srcNode.start(0);
+      // Start after any silent lead-in: dancing to a ten-second count-in is not
+      // dancing. The playhead adds the same offset back, so the beat grid — which
+      // is measured from the start of the buffer — still lines up exactly.
+      var from = introSkip > 0 ? Math.min(introSkip, Math.max(0, audioBuf.duration - 0.25)) : 0;
+      srcNode.start(0, from);
+      playStartAt = from;
     } catch (err) {
       srcNode = null;
       return false;
@@ -699,6 +749,7 @@
     playing = true;
     soundWarned = false;
     soundTimer = 0;
+    seedLatency();
     return true;
   }
   function stopBuffer() {
@@ -812,6 +863,7 @@
     synth = { bpm: bpm, period: period, step: 0, next: 0, timer: 0 };
     playStartTime = c.currentTime + 0.12;
     synth.next = playStartTime;
+    playStartAt = 0;
     beatGrid = { period: period, phase: 0, bpm: bpm, synthetic: true };
     beatGridSynthetic = true;
     playing = true;
@@ -819,6 +871,7 @@
     synth.timer = setInterval(synthPump, 25);
     synthPump();
     updateMuteBtn();
+    seedLatency();
     return true;
   }
   function stopSynth() {
@@ -964,6 +1017,19 @@
     return beat.bpm > 40 ? beat.bpm : DEFAULT_BPM;
   }
 
+  // The judgement window is a slice of real time, not of the beat: 80 ms either
+  // side of a beat. As a fraction of the beat it has to be scaled by the tempo,
+  // or a 60 BPM track would hand out a window nearly three times wider than a
+  // 180 BPM one — the same "on beat" would mean two different things. The clamp
+  // keeps an absurd tempo from making the window impossible (very fast) or
+  // trivial (very slow).
+  var BEAT_WINDOW_MS = 80, BEAT_WINDOW_MIN = 0.08, BEAT_WINDOW_MAX = 0.26;
+  function beatWindow() {
+    if (!(playing && beatGrid)) return 0.17;
+    var f = (BEAT_WINDOW_MS / 1000) / beatGrid.period;
+    return Math.max(BEAT_WINDOW_MIN, Math.min(BEAT_WINDOW_MAX, f));
+  }
+
   // With an analysed grid this is exact: how far the playhead sits from a beat.
   // settings.offsetMs shifts the judgement window onto when this player actually
   // hears the beat (headphones, Bluetooth, a slow decoder) without touching the
@@ -976,7 +1042,8 @@
       fr = beat.phase;
     }
     fr = fr - Math.floor(fr);
-    return fr < 0.17 || fr > 0.83;
+    var w = beatWindow();
+    return fr < w || fr > 1 - w;
   }
 
   // How far through the current beat we are, 0..1, with no offset applied.
@@ -2612,8 +2679,19 @@
         soundTimer += dt;
         if (soundTimer > 1.5 && !soundWarned) {
           soundWarned = true;
+          var st = audioState();
           var sw = document.getElementById("soundWarn");
-          if (sw) sw.classList.add("on");
+          if (sw) {
+            // Name the silence: a paused context, no source, or a dead signal.
+            if (st.context !== "running") {
+              sw.innerHTML = "<b>Audio is paused.</b><br/>Tap here to turn the sound on.";
+            } else if (!st.source) {
+              sw.innerHTML = "<b>Nothing is playing.</b><br/>Tap here to start the track again.";
+            } else {
+              sw.innerHTML = "<b>No sound coming through.</b><br/>Tap here to enable audio.";
+            }
+            sw.classList.add("on");
+          }
         }
       } else { soundTimer = 0; }
     } else { audioLevelNow = 0; soundTimer = 0; }
@@ -2780,6 +2858,23 @@
     syncTuneUI();
   }
 
+  // The offset starts at zero for a new player, which is wrong by the output
+  // latency of whatever is making the sound — a few milliseconds on wired
+  // headphones, up to ~200 ms over Bluetooth. The context measures its own
+  // latency, so seed the window from that once, on the first run only. A stored
+  // offset is never touched, and six taps still refine it afterwards.
+  var latencySeeded = false;
+  function seedLatency() {
+    if (latencySeeded || !storeFresh || !actx) return;
+    latencySeeded = true;
+    var secs = (typeof actx.outputLatency === "number" && actx.outputLatency > 0)
+      ? actx.outputLatency : (actx.baseLatency || 0);
+    var ms = Math.round(secs * 1000 / 5) * 5;
+    if (ms < 10 || ms > 200) return;   // nothing worth seeding, or past the clamp
+    applyOffset(ms);
+    toast("Offset seeded from your device: +" + ms + " ms \u2014 tap to calibrate");
+  }
+
   // Tap calibration: each tap measures where in the beat it landed and the
   // median becomes the offset, so the judgement window follows the player's
   // own timing (and their output latency) instead of an assumed zero.
@@ -2920,10 +3015,26 @@
   var shareEl = document.getElementById("shareBtn");
   if (shareEl) shareEl.addEventListener("click", shareResult);
 
-  /* ---- offline: a service worker caches this one file and the icons ---- */
+  /* ---- offline: a service worker caches this one file and the icons ----
+     The app version is part of the worker's URL, and the worker names its cache
+     after it. Without that, a new build installed the same cache name, so the
+     previous build's HTML kept being served out of the cache until the player
+     cleared site data by hand. Bump APP_VER with every shipped change. A page
+     that was already controlled reloads once when the new worker takes over,
+     so the fresh shell is the one on screen. */
+  var APP_VER = "1.1.0-unreleased";
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      // The very first install also claims the page; only reload a page that
+      // was already under a worker, or every first visit would refresh itself.
+      if (!hadController || reloading) return;
+      reloading = true;
+      location.reload();
+    });
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () {});
+      navigator.serviceWorker.register("sw.js?v=" + encodeURIComponent(APP_VER)).catch(function () {});
     });
   }
 
@@ -2972,7 +3083,9 @@
     soundWarnEl.classList.remove("on");
     soundWarned = false; soundTimer = 0;
     unlockAudio().then(function () {
-      if (audioBuf && !playing) playBuffer();
+      var st = audioState();
+      if (audioBuf && (!playing || !st.source)) playBuffer();
+      else if (!audioBuf && !synth) startSynth(settings.bpm);
       updateMuteBtn();
     });
   });

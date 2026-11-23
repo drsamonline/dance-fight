@@ -53,9 +53,15 @@ function extract(name) {
   throw new Error("unbalanced " + name);
 }
 
+// The window size lives in module-level vars next to isOnBeat, not inside a
+// function, so pull that declaration out of the page too rather than restating
+// its value here and letting the two drift.
+const windowConsts = (html.match(/var BEAT_WINDOW_MS = [^;]+;/) || [""])[0];
+ok("the judgement window constants are declared", windowConsts !== "", windowConsts);
+
 let src;
 try {
-  src = ["isOnBeat", "beatFractionNow", "medianOf", "applyOffset", "tapCalibrate"].map(extract).join("\n");
+  src = ["isOnBeat", "beatWindow", "beatFractionNow", "medianOf", "applyOffset", "tapCalibrate"].map(extract).join("\n");
 } catch (err) {
   ok("the calibration functions are present in " + file, false, String(err));
   summary();
@@ -89,10 +95,12 @@ const factory = new Function(
   function syncTuneUI() {}
   function toast(m) { clock.toast(m); }
   function startSynth() {}
+  ${windowConsts}
   var document = { getElementById: function () { return null; } };
   ${src}
   return {
     onBeat: isOnBeat, frac: beatFractionNow, tap: tapCalibrate,
+    setPeriod: function (p) { beatGrid.period = p; },
     get taps() { return calibTaps; }, reset: function () { calibTaps = []; }
   };
 `
@@ -172,7 +180,21 @@ reset();
 for (let i = 0; i < 6; i++) { setMs(240); g.tap(); }
 ok("240 ms late at 128 BPM reads as early (-200)", settings.offsetMs === -200, "got " + settings.offsetMs);
 
-/* ---- 9. muting must not stop the clock these read -------------------------
+/* ---- 9. the window is a fixed slice of real time, not of the beat ----------
+   Expressed as a fraction of the beat it has to scale with the tempo, or a slow
+   track hands out a much wider window in milliseconds than a fast one. */
+reset();
+g.setPeriod(1.0);                       // 60 BPM
+ok("60 BPM: 70 ms late is on beat", onBeat(70));
+ok("60 BPM: 100 ms late is OFF beat", !onBeat(100));
+g.setPeriod(0.3);                       // 200 BPM
+ok("200 BPM: 70 ms late is on beat", onBeat(70));
+ok("200 BPM: 100 ms late is OFF beat", !onBeat(100));
+g.setPeriod(0.46875);                   // 128 BPM
+ok("128 BPM: 40 ms late is on beat", onBeat(40));
+ok("128 BPM: 150 ms late is OFF beat", !onBeat(150));
+
+/* ---- 10. muting must not stop the clock these read ------------------------
    The sound button used to stop the audio source, which froze the playhead and
    made every calibrated offset a no-op. It now drops the level on the master
    bus instead, so playback and the beat grid keep running with the sound off. */

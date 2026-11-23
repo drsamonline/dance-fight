@@ -109,7 +109,8 @@ Pick an audio file (or just press Start and it plays a default 128 BPM groove).
 | `R` | Re-lock the tempo | Re-listens to the next few bars and re-fits the beat grid |
 
 **Land moves on the beat.** A move thrown within ~80 ms of a beat lands as a PERFECT: 1.6× damage and a
-bigger combo multiplier. The gold `· ON BEAT` tag on the move name tells you when you nailed it.
+bigger combo multiplier. That 80 ms is real time, so it feels the same on a 90 BPM track as on a 170 BPM
+one instead of widening and shrinking with the tempo. The gold `· ON BEAT` tag on the move name tells you when you nailed it.
 
 **On a phone:** on-screen controls appear automatically. Hold a direction with one thumb and tap attacks
 with the other. Landscape fits the whole arena; portrait crops the empty sides and frames the two dancers
@@ -164,19 +165,22 @@ drawn from the same joint angles the canvas uses. Regenerate it whenever a move 
 
 ## Checks
 
-Three dependency-free gates run against the same single file:
+Four dependency-free gates run against the same single file:
 
 ```bash
 node tools/rig-check.mjs      # skeleton invariants: bone lengths, finite joints, spin direction, stage bounds
 node tools/calib-check.mjs    # calibration maths: the offset window, the median, the clamp, the mute path
+node tools/beat-check.mjs     # beat analysis against synthetic tracks: tempo, phase, intros, refusals
 python3 tools/contrast.py     # WCAG ratios for every ink/surface pair the theme block paints
 ```
 
 `rig-check` extracts the pure `RIG-LIB` block from the HTML and runs it in a sandbox — no browser, no
 build, the same verdict every time. `calib-check` lifts the shipped judgement and calibration functions
 out of the page and drives them with a fake audio clock, so an inverted sign, or a mean where a median
-belongs, fails instead of quietly making every hit miss. `contrast.py` reads the shipped CSS and fails if a
-label drops under AA. All three exit non-zero, so any of them can gate a commit.
+belongs, fails instead of quietly making every hit miss. `beat-check` synthesises tracks with a known
+tempo, first beat and silent intro and runs the same `analyzeBuffer` the game ships, so a doubled tempo or
+a phase half a beat out fails instead of just never feeling right. `contrast.py` reads the shipped CSS and
+fails if a label drops under AA. All four exit non-zero, so any of them can gate a commit.
 
 ---
 
@@ -204,10 +208,12 @@ Being straight about what this is and isn't:
 - **Autoplay.** Browsers block audio until you interact with the page, so the first tap or click unlocks
   sound. If you ever hear nothing, a **live level meter** under the BPM readout shows whether audio is
   actually flowing — and a banner appears if it isn't. That meter reads real signal, not a flag.
-- **Tempo lock starts at load.** A track with a long ambient intro, or one that drifts tempo, gets a grid
-  based on the first two minutes. Press `R` (or **RE-LOCK** in the corner) to re-analyse the next few bars
-  and re-fit the grid from the playhead without restarting the track. If no clear pulse is found at all it
-  falls back to a steady 128 BPM.
+- **Tempo lock starts at load.** The grid is fitted to the first two minutes. A silent lead-in — a
+  count-in, a fade-up, an empty bar — is measured and skipped, and the drop zone reports where the first
+  beat is. A track that opens with a beatless ambient intro, or one that drifts tempo, is the case for
+  `R` (or **RE-LOCK** in the corner): it re-analyses the next few bars and re-fits the grid from the
+  playhead without restarting the track. If no clear pulse is found at all it falls back to a steady
+  128 BPM.
 - **Portrait is cropped, not re-laid-out.** Phone portrait zooms into the middle 480 units of the arena so
   the dancers are legible, which means the outer thirds of the stage are off-screen. Landscape shows all
   of it.

@@ -3,10 +3,10 @@
   "locked": false,
   "files": {
     "README.md": {
-      "sha": "0575162ef5dbb9477a44cebb91efaf2ba014fceb",
+      "sha": "64fcef00a58ffbe06da3726339f1c0a95ef4e9a1",
       "producer": "buffalo@2026-11-23",
       "class": "generated",
-      "at": "2026-11-23T06:36:50Z"
+      "at": "2026-11-23T10:51:02Z"
     },
     "docs/index.html": {
       "sha": "34f37e265d7b418d63721d38440038f01d2605f4",
@@ -15,10 +15,10 @@
       "at": "2026-11-14T18:06:20Z"
     },
     "docs/play/index.html": {
-      "sha": "b9f2c854a09a087fef30a56721b09f65af1d0753",
+      "sha": "29baa4a31d0b5276cfd820dce8421278913cb4ed",
       "producer": "buffalo@2026-11-23",
       "class": "hand",
-      "at": "2026-11-23T06:37:00Z"
+      "at": "2026-11-23T10:51:02Z"
     },
     ".github/workflows/build-apps.yml": {
       "sha": "65d8211f28b9bb0492a0bdc9831c013ab6bc6621",
@@ -27,10 +27,10 @@
       "at": "2026-11-10T15:12:04Z"
     },
     "CHANGELOG.md": {
-      "sha": "4634069bd3a3738d85523d6be9a057661a7f1465",
+      "sha": "287008e7964657360710537eb2be172c9b89603d",
       "producer": "buffalo@2026-11-23",
       "class": "agent",
-      "at": "2026-11-23T06:37:00Z"
+      "at": "2026-11-23T10:51:02Z"
     },
     "tools/contrast.py": {
       "sha": "72724051ccdfadd4fd67e28bcb7b9e76bee4d515",
@@ -63,10 +63,10 @@
       "at": "2026-11-23T05:35:26Z"
     },
     "docs/play/sw.js": {
-      "sha": "1ae27a7ff8b9e6f2fc5434f0a8ff15c262778dea",
+      "sha": "01492f1df52115decf784d02663658e803c5fdd3",
       "producer": "buffalo@2026-11-23",
       "class": "agent",
-      "at": "2026-11-23T05:35:26Z"
+      "at": "2026-11-23T10:51:02Z"
     },
     "docs/play/icon.svg": {
       "sha": "eee3a24305a845f2d0a6a25732cb4d082961cf3e",
@@ -81,11 +81,17 @@
       "at": "2026-11-23T05:35:26Z"
     },
     "tools/calib-check.mjs": {
-      "sha": "103f92689cdf48db5257a02118007f612d5c0095",
+      "sha": "c6d54a03342b84953d9d5a41e08bd722fa679138",
       "producer": "buffalo@2026-11-23",
       "class": "agent",
-      "at": "2026-11-23T06:36:50Z"
+      "at": "2026-11-23T10:51:02Z"
+    },
+    "tools/beat-check.mjs": {
+      "sha": "990de377ecc6c0d664926b6495bc5073463e8239",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T10:51:15Z"
     }
   },
-  "updated": "2026-11-23T06:37:00Z"
+  "updated": "2026-11-23T10:51:15Z"
 }

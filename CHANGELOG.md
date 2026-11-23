@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- **A tempo-independent judgement window.** The PERFECT window was a fraction of a beat (17%), so it was
+  ~170 ms wide at 60 BPM and ~57 ms at 180 BPM — the same move counted as in time on a slow track and late
+  on a fast one. It is now 80 ms of real time at any tempo, clamped to 8–26% of a beat, so "on beat" means
+  the same thing all night.
+- **Silent intros are skipped.** A count-in, a fade-up or an empty bar before the first beat is measured
+  during analysis and reported ("first beat at 0:04"); playback starts there instead of making the player
+  dance to silence, and the beat grid still lines up because the playhead adds the skip back.
+- **The latency offset seeds itself.** On a device's first run the offset now starts from the audio
+  context's own output-latency measurement instead of zero, with a toast saying so. A stored offset is
+  never overwritten, and six taps still refine it.
+- **An audio-state check.** The warning banner now names which silence it is — a suspended context, no
+  source at all, or a dead signal — and tapping it restarts a track that stopped, not just the unlock.
+  `window.danceFightAudio()` returns the same snapshot for anything that needs to ask.
+- **A versioned offline cache.** The service worker names its cache after the build in its own URL, so a
+  new build installs a fresh worker with an empty cache instead of serving the last build's HTML out of
+  the old one; navigations are fetched with `no-store`, and an already-controlled page reloads once when
+  the new worker takes over.
+- **A fourth dependency-free check.** `tools/beat-check.mjs` lifts the shipped `analyzeBuffer` out of the
+  page and runs it against synthesised tracks with a known tempo, first beat and silent intro: exact
+  tempo at 100/120/150 BPM, the grid on the real first beat, intros measured rather than treated as beat
+  one, silence and sub-two-second clips refused instead of guessed.
+
 - **Latency calibration.** Tap the pad six times along with the groove and the median offset becomes the
   judgement window, so hits land where the player actually hears the beat. Also draggable by hand
   (−200…+200 ms), stored locally, and defaulting to zero so nothing changes for a player who never
@@ -21,6 +43,9 @@
   shrinking the whole 16:9 stage into the window.
 - **Installable and offline.** A web manifest and a network-first service worker cache the game and its
   icons.
+- **A track dropped mid-round actually starts.** Loading a file while the practice groove or another track
+  was already playing swapped in the new beat grid but never started the new audio, so the fight danced on
+  in silence and unmuting could not bring it back; the analysed buffer now goes straight to the bus.
 - **Mute really mutes.** The sound button drops the level on the master bus instead of stopping playback,
   so muting no longer freezes the beat: the dance, the beat pulse and a calibrated latency offset all keep
   working with the sound off, and a muted run is no longer reported as "no sound coming through".
