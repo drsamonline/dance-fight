@@ -3,10 +3,10 @@
   "locked": false,
   "files": {
     "README.md": {
-      "sha": "0308aa59bc4716d723ecdaec54db015a3ed6d969",
-      "producer": "bootstrap@2026-11-04",
+      "sha": "e6ed217f6d473113a4f3c3082ad25f2c4208c60f",
+      "producer": "buffalo@2026-11-23",
       "class": "generated",
-      "at": "2026-11-23T02:59:15Z"
+      "at": "2026-11-23T05:35:44Z"
     },
     "docs/index.html": {
       "sha": "34f37e265d7b418d63721d38440038f01d2605f4",
@@ -15,17 +15,71 @@
       "at": "2026-11-14T18:06:20Z"
     },
     "docs/play/index.html": {
-      "sha": "2453eb63b5f1cbc9c561a2a1f8ad891ad5254c67",
+      "sha": "c2d89b27bb4e76a2a3bf04cd09c78bf659cae33c",
       "producer": "human",
       "class": "hand",
-      "at": "2026-11-23T02:59:15Z"
+      "at": "2026-11-23T05:35:44Z"
     },
     ".github/workflows/build-apps.yml": {
       "sha": "65d8211f28b9bb0492a0bdc9831c013ab6bc6621",
       "producer": "audit-2026-11-10",
       "class": "canonical",
       "at": "2026-11-10T15:12:04Z"
+    },
+    "CHANGELOG.md": {
+      "sha": "5423869e8b8abb9c3054c143658cb443854a9203",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "tools/contrast.py": {
+      "sha": "72724051ccdfadd4fd67e28bcb7b9e76bee4d515",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "tools/filmstrip.mjs": {
+      "sha": "f1aade092eb94ba233f7e7f55d101d8f0e070733",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "tools/rig-check.mjs": {
+      "sha": "b7d45cb0fcfff5e4857d695f16025edeafb1b8a0",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "docs/assets/finisher.svg": {
+      "sha": "a5750e122fd8fc7e3d5176efa3f4712fbf8e5954",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "docs/play/manifest.webmanifest": {
+      "sha": "2f3fa98f70edd394d57be6ffbf7654e61c7cda6e",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "docs/play/sw.js": {
+      "sha": "1ae27a7ff8b9e6f2fc5434f0a8ff15c262778dea",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "docs/play/icon.svg": {
+      "sha": "eee3a24305a845f2d0a6a25732cb4d082961cf3e",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
+    },
+    "docs/play/icon.png": {
+      "sha": "fb0608bd314ddbd75971e95b0b72d66af62edc7d",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T05:35:26Z"
     }
   },
-  "updated": "2026-11-23T02:59:15Z"
+  "updated": "2026-11-23T05:35:44Z"
 }
