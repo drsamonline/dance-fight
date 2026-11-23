@@ -661,40 +661,61 @@
   /* ============================================================
      RIG — forward-kinematic skeleton, angles in degrees
      convention: 0deg = straight down, +deg rotates toward "forward" (facing dir)
+     Every joint the renderer needs is solved here — shoulder, elbow, wrist,
+     hip, knee, ankle, toe — so a pose only has to name angles.
      ============================================================ */
-  var BODY = { legU: 44, legL: 44, torso: 67, headR: 14, neck: 15, shW: 27, armU: 34, armL: 32 };
+  var BODY = {
+    legU: 45, legL: 43, foot: 16, torso: 66, neck: 16,
+    shW: 37, armU: 33, armL: 30
+  };
 
   function seg(p, aDeg, len) {
     var r = aDeg * Math.PI / 180;
     return [p[0] + Math.sin(r) * len, p[1] + Math.cos(r) * len];
   }
 
-  function rig(pose) {
-    var lean = pose.lean;
-    var pelvis = [pose.pelvisX || 0, -pose.pelvisY];
-    var dir = [Math.sin(lean * Math.PI / 180), -Math.cos(lean * Math.PI / 180)]; // up along torso
-    var perp = [Math.cos(lean * Math.PI / 180), Math.sin(lean * Math.PI / 180)];
+  function rig(pose, depth) {
+    var lean = pose.lean || 0;
+    // depth is |cos(spin)|: 1 facing us, 0 in profile. The shoulder and hip
+    // sockets are the body's width axis, so they fold towards the spine as the
+    // figure turns instead of the whole body being squashed flat.
+    var d = (depth === undefined) ? 1 : depth;
+    var pelvis = [pose.pelvisX || 0, -(pose.pelvisY === undefined ? 96 : pose.pelvisY)];
+    var dir = [Math.sin(lean * Math.PI / 180), -Math.cos(lean * Math.PI / 180)]; // up the spine
+    var perp = [Math.cos(lean * Math.PI / 180), Math.sin(lean * Math.PI / 180)]; // forward across the body
     var neck = [pelvis[0] + dir[0] * BODY.torso, pelvis[1] + dir[1] * BODY.torso];
     var headC = [neck[0] + dir[0] * BODY.neck, neck[1] + dir[1] * BODY.neck];
-    var shF = [neck[0] + perp[0] * BODY.shW * 0.42, neck[1] + perp[1] * BODY.shW * 0.42];
-    var shB = [neck[0] - perp[0] * BODY.shW * 0.42, neck[1] - perp[1] * BODY.shW * 0.42];
+    var shSep = BODY.shW * 0.44 * d;
+    var shF = [neck[0] + perp[0] * shSep + dir[0] * (pose.shrugF || 0),
+               neck[1] + perp[1] * shSep + dir[1] * (pose.shrugF || 0)];
+    var shB = [neck[0] - perp[0] * shSep + dir[0] * (pose.shrugB || 0),
+               neck[1] - perp[1] * shSep + dir[1] * (pose.shrugB || 0)];
 
-    function arm(sh, u, l) {
+    // shoulder -> elbow -> wrist -> hand; the wrist angle is relative to the
+    // forearm, so a wave can run down the arm one joint at a time
+    function arm(sh, u, l, w) {
       var el = seg(sh, u, BODY.armU);
-      var hd = seg(el, l, BODY.armL);
-      return { sh: sh, el: el, hd: hd };
+      var wr = seg(el, l, BODY.armL);
+      var ang = l + (w || 0);
+      return { sh: sh, el: el, wr: wr, ang: ang };
     }
-    function leg(u, l) {
-      var kn = seg(pelvis, u, BODY.legU);
-      var ft = seg(kn, l, BODY.legL);
-      return { hip: pelvis, kn: kn, ft: ft };
+    // hip -> knee -> ankle -> toe; the foot angle is absolute, so a toe can be
+    // pointed, flexed or planted independently of the shin
+    // off staggers the two hip sockets across the body, so the near thigh sits
+    // in front of the far one instead of both sprouting from a single point
+    function leg(off, u, l, f) {
+      var hip = [pelvis[0] + perp[0] * off * d, pelvis[1] + perp[1] * off * d];
+      var kn = seg(hip, u, BODY.legU);
+      var an = seg(kn, l, BODY.legL);
+      var fang = (f === undefined) ? 80 : f;
+      return { hip: hip, kn: kn, an: an, toe: seg(an, fang, BODY.foot), ang: fang };
     }
     return {
-      pelvis: pelvis, neck: neck, head: headC,
-      armB: arm(shB, pose.armBU, pose.armBL),
-      armF: arm(shF, pose.armFU, pose.armFL),
-      legB: leg(pose.legBU, pose.legBL),
-      legF: leg(pose.legFU, pose.legFL)
+      pelvis: pelvis, neck: neck, head: headC, dir: dir, perp: perp,
+      armB: arm(shB, pose.armBU, pose.armBL, pose.armBW),
+      armF: arm(shF, pose.armFU, pose.armFL, pose.armFW),
+      legB: leg(-4.5, pose.legBU, pose.legBL, pose.legBF),
+      legF: leg(4.5, pose.legFU, pose.legFL, pose.legFF)
     };
   }
 
@@ -703,55 +724,73 @@
      ============================================================ */
   function basePose() {
     return {
-      lean: 0, pelvisY: 88, pelvisX: 0, headT: 0, spin: 0,
-      armBU: 14, armBL: 16, armFU: -14, armFL: -16,
-      legBU: -8, legBL: -6, legFU: 10, legFL: 12
+      lean: 0, pelvisY: 96, pelvisX: 0, headT: 0, spin: 0,
+      shrugF: 0, shrugB: 0,
+      armBU: 16, armBL: 20, armBW: 0,
+      armFU: -16, armFL: -20, armFW: 0,
+      legBU: -9, legBL: -5, legBF: 80,
+      legFU: 10, legFL: 4, legFF: 82
     };
   }
 
-  // Continuous dance groove, driven by the beat phase. Deliberately large
-  // amplitude: the character should be unmistakably dancing at all times,
-  // and attack poses get layered on top of this rather than replacing it.
+  // The groove. Deliberately large and asymmetric: hips lead, the chest
+  // counter-rotates, the head lags and the elbows drag behind the shoulders so
+  // the arms ripple instead of swinging like planks. Attacks are layered on
+  // top of this, so the character never stops dancing.
   function idlePose(ph, pulse, moveDir) {
     var p = basePose();
     var a = ph * Math.PI * 2;
     var s = Math.sin(a), c = Math.cos(a);
     var onBeat = Math.max(0, s);      // 1 on the beat
     var offBeat = Math.max(0, -s);    // 1 on the off-beat
-    var squash = pulse * 0.14;
+    var squash = pulse * 0.12;
+    var sway = Math.sin(a * 0.5);      // slow two-bar weight shift
+    var swayLag = Math.sin(a * 0.5 - 0.8);
 
-    // whole-body bounce: dip on the beat, rise between; plus a slow hip sway
-    p.pelvisY = 82 + offBeat * 11 - squash * 30;
-    p.pelvisX = 6 * Math.sin(a * 0.5) + moveDir * 4;
-    p.lean = 6 * Math.sin(a + 0.6) + moveDir * 9;
-    p.headT = 9 * Math.sin(a + 1.2) + moveDir * 5;
+    // hips: drop on the beat, roll between beats. A groove is mostly hips.
+    p.pelvisY = 92 + offBeat * 5 - squash * 26;
+    p.pelvisX = 8 * sway + moveDir * 3;
 
-    // arms: a travelling wave — the elbow lags the shoulder, so the arm ripples
-    var w1 = Math.sin(a), w2 = Math.sin(a - 0.85);
-    p.armBU = 6 + 68 * Math.max(0, w1);
-    p.armBL = 12 + 76 * Math.max(0, w2);
-    p.armFU = 6 + 68 * Math.max(0, -w1);
-    p.armFL = 12 + 76 * Math.max(0, -w2);
+    // chest leans against the hip, head follows a little later than the chest
+    p.lean = -8 * swayLag + 4 * Math.sin(a + 1.1) + moveDir * 8;
+    p.headT = 8 * Math.sin(a - 0.6) + 5 * swayLag + moveDir * 4;
+    p.shrugF = 4 * onBeat - 1.5;
+    p.shrugB = 4 * offBeat - 1.5;
 
-    // counter-swing so the arms swing through the beat instead of sticking up
-    p.armBU += 14 * c; p.armBL += 18 * c;
-    p.armFU -= 14 * c; p.armFL -= 18 * c;
+    // arms: one rides high while the other sweeps low, each with an elbow that
+    // arrives late — that delay is what makes a hand-dance read as a wave
+    var riseF = (s + 1) * 0.5, lagF = (Math.sin(a - 0.9) + 1) * 0.5;
+    var riseB = (Math.sin(a + Math.PI) + 1) * 0.5;
+    var lagB = (Math.sin(a + Math.PI - 0.9) + 1) * 0.5;
+    // elbows stay bent and out from the ribs; the hand leads the forearm,
+    // so on the beat the arm opens up over the head instead of folding in
+    p.armFU = 30 + 58 * riseF;
+    p.armFL = p.armFU + 26 + 44 * lagF;
+    p.armFW = -6 + 26 * lagF;
+    p.armBU = 20 + 46 * riseB;
+    p.armBL = p.armBU + 20 + 34 * lagB;
+    p.armBW = -4 + 20 * lagB;
 
-    // legs: knee lift on the beat
-    p.legBU = -8 - 13 * onBeat;
-    p.legBL = -6 - 27 * onBeat;
-    p.legFU = 10 + 15 * onBeat;
-    p.legFL = 12 + 31 * onBeat;
+    // legs: knee bounce, heel-toe roll, weight on the standing leg
+    p.legFU = 10 + 16 * onBeat + 5 * sway;
+    p.legFL = 4 + 24 * onBeat;
+    p.legFF = 82 - 20 * onBeat;
+    p.legBU = -9 - 12 * offBeat - 5 * sway;
+    p.legBL = -5 - 20 * offBeat;
+    p.legBF = 80 + 12 * offBeat;
 
-    // shuffle step: legs scissor and arms counter-swings while moving
+    // shuffle step: legs scissor, hips open, arms counter-swing
     if (moveDir !== 0) {
       var stepPh = Math.sin(a) * moveDir;
-      p.legFU = 10 + 27 * stepPh;
-      p.legFL = 12 + 37 * stepPh;
-      p.legBU = -8 - 27 * stepPh;
-      p.legBL = -6 - 37 * stepPh;
-      p.armBU += 15 * moveDir;
-      p.armFU -= 15 * moveDir;
+      p.legFU = 10 + 26 * stepPh;
+      p.legFL = 4 + 36 * stepPh;
+      p.legBU = -9 - 26 * stepPh;
+      p.legBL = -5 - 36 * stepPh;
+      p.legFF = 80 + 18 * stepPh;
+      p.armFU -= 24 * moveDir;
+      p.armFL -= 28 * moveDir;
+      p.armBU += 24 * moveDir;
+      p.pelvisX += 4 * moveDir;
     }
     return p;
   }
@@ -776,6 +815,10 @@
     var a = keys[i], b = keys[Math.min(i + 1, keys.length - 1)];
     var span = Math.max(1e-6, b[0] - a[0]);
     var u = Math.max(0, Math.min(1, (prog - a[0]) / span));
+    // ease each segment: mostly smooth so joints swing on arcs, a little linear
+    // so a fast move still snaps instead of floating
+    var e = u * u * (3 - 2 * u);
+    u = u * 0.35 + e * 0.65;
     // spin is carried on the key (4th slot) and interpolated directly rather than
     // blended with the idle pose, so a rotation keeps turning instead of unwinding.
     var sa = a[3] || 0, sb = b[3] || 0;
@@ -790,55 +833,89 @@
       name: "Arm Wave", short: "JAB", dur: 0.36, from: 0.11, to: 0.21,
       dmg: 6, reach: 120, meter: 9, kb: 70,
       keys: [
-        [0.00, { lean: -7, armFU: -36, armFL: -58, armBU: 18, pelvisY: 86, pelvisX: -4 }, 0, 0],
-        [0.16, { lean: -4, armFU: -6, armFL: -28, armBU: 22 }, 0.7, 0],
-        [0.30, { lean: 12, armFU: 86, armFL: 98, armBU: -32, armBL: -54, legFU: 20, legFL: 27, pelvisY: 89, pelvisX: 5 }, 1, 0],
-        [0.50, { lean: 7, armFU: 56, armFL: 70 }, 1, 0],
-        [1.00, { lean: 0, armFU: -14, armFL: -16 }, 0, 0]
+        [0.00, { lean: -6, pelvisY: 94, armFU: 78, armFL: 96, armFW: -22,
+                 armBU: -24, armBL: 42, armBW: 18, legFU: 14, legFL: 8 }, 0, 0],
+        [0.20, { lean: -2, pelvisY: 97, armFU: 88, armFL: 118, armFW: 26,
+                 armBU: 16, armBL: 56, armBW: -14, shrugF: 4 }, 0.62, 0],
+        [0.36, { lean: 14, pelvisY: 100, armFU: 104, armFL: 64, armFW: -44,
+                 armBU: -32, armBL: -16, armBW: 24, legFU: 26, legFL: 16,
+                 legFF: 58, legBU: -16, legBL: -10, headT: 8 }, 1, 0],
+        [0.60, { lean: 7, pelvisY: 97, armFU: 84, armFL: 50, armFW: -18,
+                 armBU: -8, armBL: 10 }, 1, 0],
+        [1.00, { lean: 0, pelvisY: 96, armFU: -16, armFL: -20, armFW: 0,
+                 armBU: 16, armBL: 20 }, 0, 0]
       ]
     },
     kick: {
       name: "Spinning Kick", short: "KICK", dur: 0.60, from: 0.20, to: 0.34,
       dmg: 11, reach: 140, meter: 12, kb: 130,
       keys: [
-        [0.00, { lean: -7, legFU: -20, legFL: -46, pelvisY: 84 }, 0, 0],
-        [0.22, { lean: -14, legFU: 22, legFL: -18, legBU: -22, armBU: 42, armBL: 62, armFU: -52, armFL: -72, pelvisY: 86 }, 0.9, -120],
-        [0.40, { lean: -25, legFU: 84, legFL: 90, legBU: -18, legBL: -10, armBU: 64, armBL: 78, armFU: -68, armFL: -90, pelvisY: 80 }, 1, -230],
-        [0.62, { lean: -12, legFU: 58, legFL: 70 }, 1, -320],
-        [1.00, { lean: 0, legFU: 10, legFL: 12, legBU: -8, legBL: -6, pelvisY: 88 }, 0, -360]
+        [0.00, { lean: -8, pelvisY: 90, legFU: 16, legFL: 6, armFU: 40,
+                 armFL: 62, armBU: -30, armBL: -48 }, 0, 0],
+        [0.20, { lean: -16, pelvisY: 86, legFU: 42, legFL: 10, legFF: 70,
+                 legBU: -24, legBL: -10, armFU: -56, armFL: -72, armBU: 56,
+                 armBL: 74, headT: -8 }, 0.85, -110],
+        [0.40, { lean: -27, pelvisY: 84, legFU: 68, legFL: 36, legFF: 66,
+                 legBU: -14, legBL: -6, armBU: 78, armBL: 98, armFU: -74,
+                 armFL: -98, headT: -12 }, 1, -220],
+        [0.62, { lean: -30, pelvisY: 86, legFU: 96, legFL: 92, legFF: 74,
+                 legBU: -6, legBL: 2, armBU: 94, armBL: 112, armFU: -86,
+                 armFL: -106 }, 1, -300],
+        [0.80, { lean: -10, pelvisY: 92, legFU: 38, legFL: 16, armFU: -30,
+                 armFL: -52, armBU: 30, armBL: 40 }, 1, -348],
+        [1.00, { lean: 0, pelvisY: 96, legFU: 10, legFL: 4, legBU: -9,
+                 legBL: -5, armFU: -16, armFL: -20, armBU: 16, armBL: 20 }, 0, -360]
       ]
     },
     upper: {
       name: "Body-Roll Uppercut", short: "UPPER", dur: 0.52, from: 0.15, to: 0.27,
       dmg: 14, reach: 116, meter: 14, kb: 190,
       keys: [
-        [0.00, { lean: 13, pelvisY: 76, armFU: 16, armFL: -14, legFU: 22, legFL: 30 }, 0, 0],
-        [0.18, { lean: 21, pelvisY: 71, armFU: 4, armFL: -22, headT: 14 }, 0.85, -95],
-        [0.36, { lean: -9, pelvisY: 99, armFU: 160, armFL: 154, armBU: -34, armBL: -20, legFU: -8, legFL: -4 }, 1, -235],
-        [0.58, { lean: -2, pelvisY: 92, armFU: 114, armFL: 104 }, 1, -320],
-        [1.00, { lean: 0, pelvisY: 88, armFU: -14, armFL: -16 }, 0, -360]
+        [0.00, { lean: 16, pelvisY: 84, armFU: 8, armFL: -24, armBU: -6,
+                 armBL: -30, headT: 12, legFU: 26, legFL: 20, legFF: 68 }, 0, 0],
+        [0.16, { lean: 25, pelvisY: 78, armFU: -26, armFL: -48, armFW: 22,
+                 armBW: 20, headT: 17, legFU: 32, legFL: 26, legFF: 64,
+                 legBU: -18, legBL: -12 }, 0.9, -60],
+        [0.36, { lean: -12, pelvisY: 104, armFU: 150, armFL: 168, armFW: -20,
+                 armBU: -40, armBL: -30, headT: -10, legFU: -4, legFL: 4,
+                 legFF: 92, legBU: 6, legBL: 2, shrugF: 5 }, 1, -190],
+        [0.56, { lean: -6, pelvisY: 100, armFU: 132, armFL: 150, armFW: 8,
+                 armBU: -22, armBL: -6 }, 1, -270],
+        [1.00, { lean: 0, pelvisY: 96, armFU: -16, armFL: -20, armFW: 0,
+                 armBU: 16, armBL: 20 }, 0, -360]
       ]
     },
     fin: {
       name: "Body-Roll Finisher", short: "FINISHER", dur: 1.05, from: 0.32, to: 0.58,
       dmg: 34, reach: 164, meter: -100, kb: 420, special: true,
       keys: [
-        [0.00, { lean: 0, pelvisY: 80, armFU: 24, armBU: -24 }, 0, 0],
-        [0.12, { lean: -13, pelvisY: 71, armFU: 48, armFL: 26, armBU: -48, armBL: -26 }, 1, -95],
-        [0.34, { lean: 0, pelvisY: 103, armFU: 92, armFL: 90, armBU: -92, armBL: -90, legFU: 38, legFL: 32, legBU: -38, legBL: -32 }, 1, -300],
-        [0.56, { lean: 0, pelvisY: 107, armFU: 172, armFL: 166, armBU: -172, armBL: -166, legFU: 48, legFL: 24, legBU: -48, legBL: -24 }, 1, -520],
-        [0.80, { lean: 0, pelvisY: 88, armFU: 94, armFL: 90, armBU: -94, armBL: -90, legFU: 10, legFL: 12, legBU: -8, legBL: -6 }, 1, -680],
-        [1.00, { lean: 0, pelvisY: 88, armFU: -14, armFL: -16, armBU: 14, armBL: 16 }, 0, -720]
+        [0.00, { lean: 0, pelvisY: 84, armFU: 30, armBU: -30, armFW: 0 }, 0, 0],
+        [0.14, { lean: -14, pelvisY: 74, armFU: 54, armFL: 30, armBU: -54,
+                 armBL: -30, headT: 10, legFU: 22, legFL: 16 }, 1, -100],
+        [0.34, { lean: 0, pelvisY: 108, armFU: 98, armFL: 92, armBU: -98,
+                 armBL: -92, legFU: 40, legFL: 26, legBU: -40, legBL: -26,
+                 legFF: 62, legBF: 62 }, 1, -300],
+        [0.54, { lean: 0, pelvisY: 112, armFU: 168, armFL: 176, armBU: -168,
+                 armBL: -176, legFU: 62, legFL: 44, legBU: -62, legBL: -44,
+                 legFF: 52, legBF: 52 }, 1, -520],
+        [0.78, { lean: 6, pelvisY: 96, armFU: 110, armFL: 96, armBU: -110,
+                 armBL: -96, legFU: 20, legFL: 8, legBU: -20, legBL: -8 }, 1, -664],
+        [1.00, { lean: 0, pelvisY: 96, armFU: -16, armFL: -20, armBU: 16,
+                 armBL: 20 }, 0, -720]
       ]
     }
   };
 
-  var KO_POSE = { lean: 74, pelvisY: 40, headT: 30, armBU: 60, armBL: 30, armFU: -70, armFL: -40,
-                  legBU: -40, legBL: -70, legFU: 55, legFL: 80 };
-  var HIT_POSE = { lean: -18, headT: -12, armBU: 40, armBL: 70, armFU: -40, armFL: -70, pelvisY: 84 };
-  var BLOCK_POSE = { lean: -14, headT: -8, armFU: 62, armFL: 118, armBU: 30, armBL: 90,
-                     legFU: 14, legFL: 18, legBU: -12, legBL: -10, pelvisY: 80 };
-
+  var KO_POSE = { lean: 62, pelvisY: 52, headT: 26,
+                  armBU: 44, armBL: 84, armBW: 20, armFU: -62, armFL: -110, armFW: -20,
+                  legBU: -52, legBL: -46, legBF: 40, legFU: 66, legFL: 58, legFF: 30 };
+  var HIT_POSE = { lean: -20, headT: -16, armBU: 52, armBL: 86, armBW: 10,
+                   armFU: -46, armFL: -78, armFW: -10, pelvisY: 92,
+                   legFU: 18, legFL: 10, legBU: -16, legBL: -8 };
+  var BLOCK_POSE = { lean: -12, headT: -6, armFU: 46, armFL: 158, armFW: -24,
+                     armBU: 38, armBL: 150, armBW: -18, shrugF: 4,
+                     legFU: 20, legFL: 12, legBU: -16, legBL: -8,
+                     legFF: 74, legBF: 74, pelvisY: 90 };
   /* ============================================================
      CHARACTERS
      ============================================================ */
@@ -851,25 +928,32 @@
       phase: phase, moveDir: 0, onBeatMove: false,
       koT: 0, flash: 0, guard: 0, hist: [],
       pal: pal, name: name,
-      think: 0, walkDir: 0, blockT: 0, koPose: null
+      think: 0, walkDir: 0, blockT: 0
     };
   }
 
   var PAL_PLAYER = {
-    suit: "#1fc9e8", suitDark: "#0d7f9c", suitFar: "#0a5f78",
-    trim: "#ff3fd0", trimGlow: "#ff3fd0",
-    hair: "#1b0a33", hairStreak: "#4ff0ff",
-    skin: "#f6c9a0", shoe: "#0d2b3a", ghost: "#2ad4ff",
-    flash: "#d6f7ff", flashFar: "#9fdcef"
+    suit: "#35dff6", suitHi: "#a6f7ff", suitLo: "#0a7c9c",
+    pants: "#3c4290", pantsLo: "#1f2456",
+    trim: "#ff4fd8", trimGlow: "#ff4fd8", shirt: "#f2fbff",
+    hair: "#251244", hairStreak: "#5cf3ff",
+    skin: "#f4c39b", skinLo: "#cf9269",
+    boot: "#eafaff", bootLo: "#a6cbdd", sole: "#16283d", glove: "#ff4fd8",
+    hairTie: "#ff4fd8", angry: false,
+    ghost: "#2ad4ff", flash: "#eaffff", flashFar: "#bfefff",
+    shoe: "#16283d"
   };
   var PAL_ENEMY = {
-    suit: "#ff8a2b", suitDark: "#a34a08", suitFar: "#7a3505",
-    trim: "#ff2b5c", trimGlow: "#ff2b5c",
-    hair: "#2a0a14", hairStreak: "#ffb84d",
-    skin: "#e8b184", shoe: "#3a1405", ghost: "#ffa14d",
-    flash: "#ffe2c8", flashFar: "#e8b48a"
+    suit: "#ff9a3c", suitHi: "#ffdcad", suitLo: "#a8490a",
+    pants: "#4e2039", pantsLo: "#2c101e",
+    trim: "#ff2b5c", trimGlow: "#ff2b5c", shirt: "#fff2e2",
+    hair: "#28070f", hairStreak: "#ffc05c",
+    skin: "#dda578", skinLo: "#b07248",
+    boot: "#ffcf8a", bootLo: "#bd7635", sole: "#26100a", glove: "#ff2b5c",
+    hairTie: "#ff2b5c", angry: true,
+    ghost: "#ffa14d", flash: "#ffe9d6", flashFar: "#e8b48a",
+    shoe: "#26100a"
   };
-
   var player, enemy;
   var state = "menu"; // menu | fight | over
   var particles = [], popups = [], rings = [], shake = 0, flashScreen = 0, hitStop = 0;
@@ -1207,10 +1291,7 @@
      ============================================================ */
   function resolvePose(c) {
     if (c.state === "ko") {
-      var kp = c.koPose || (c.koPose = KO_POSE);
-      var fall = Math.min(1, c.koT / 0.5);
-      var base0 = basePose();
-      return blendPose(base0, kp, fall);
+      return blendPose(basePose(), KO_POSE, Math.min(1, c.koT / 0.5));
     }
     var base = idlePose(beat.phase + c.phase, beat.pulse, c.moveDir || 0);
 
@@ -1330,7 +1411,74 @@
 
   /* ---- shape primitives -------------------------------------------------- */
 
-  // tapered capsule between two joints, with an optional dark outline pass
+  // darken a #rrggbb colour towards black, for the shaded side of a limb
+  function darken(hex, k) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = Math.round(((n >> 16) & 255) * k);
+    var g = Math.round(((n >> 8) & 255) * k);
+    var b = Math.round((n & 255) * k);
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  function ball(p, r, fill, outline) {
+    if (outline) {
+      ctx.fillStyle = outline;
+      ctx.beginPath(); ctx.arc(p[0], p[1], r + 1.7, 0, 6.2832); ctx.fill();
+    }
+    ctx.fillStyle = fill;
+    ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 6.2832); ctx.fill();
+  }
+
+  // A limb: a tapered tube with a muscle bulge along its belly, rounded caps at
+  // both joints, and a gradient across it so it reads as a volume rather than a
+  // flat stick. fillB is the shadow side; pass null for a flat (ghost) fill.
+  function limb(a, b, wa, wb, bulge, fill, fillB, line) {
+    var dx = b[0] - a[0], dy = b[1] - a[1];
+    var L = Math.sqrt(dx * dx + dy * dy) || 1;
+    var ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+    function wAt(t) {
+      return wa + (wb - wa) * t + bulge * Math.pow(Math.sin(Math.PI * t), 1.5);
+    }
+    function trace(e) {
+      ctx.beginPath();
+      var N = 10, i, t, w, x, y;
+      for (i = 0; i <= N; i++) {
+        t = i / N; w = wAt(t) + e;
+        x = a[0] + ux * L * t + nx * w; y = a[1] + uy * L * t + ny * w;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      for (i = N; i >= 0; i--) {
+        t = i / N; w = wAt(t) + e;
+        ctx.lineTo(a[0] + ux * L * t - nx * w, a[1] + uy * L * t - ny * w);
+      }
+      ctx.closePath();
+      ctx.moveTo(a[0] + wa + e, a[1]);
+      ctx.arc(a[0], a[1], Math.max(0.1, wa + e), 0, 6.2832);
+      ctx.moveTo(b[0] + wb + e, b[1]);
+      ctx.arc(b[0], b[1], Math.max(0.1, wb + e), 0, 6.2832);
+    }
+    if (line) { ctx.fillStyle = line; trace(1.9); ctx.fill(); }
+    var m = Math.max(wa, wb) + bulge;
+    if (fillB && m > 0.7) {
+      var g = ctx.createLinearGradient(a[0] + nx * m, a[1] + ny * m,
+                                       a[0] - nx * m, a[1] - ny * m);
+      g.addColorStop(0, fill);
+      g.addColorStop(0.52, fill);
+      g.addColorStop(1, fillB);
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = fill;
+    }
+    trace(0);
+    ctx.fill();
+  }
+
+  // convenience: shaded limb, flat when it is a ghost trail
+  function limbS(a, b, wa, wb, bulge, fill, line, ghost) {
+    limb(a, b, wa, wb, bulge, fill, ghost ? null : darken(fill, 0.66), line);
+  }
+
+  // plain tapered capsule, used for hair
   function capsule(a, b, wa, wb, fill, outline) {
     var dx = b[0] - a[0], dy = b[1] - a[1];
     var L = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -1350,126 +1498,293 @@
     ctx.fillStyle = fill; path(0); ctx.fill();
   }
 
-  function ball(p, r, fill, outline) {
-    if (outline) {
-      ctx.fillStyle = outline;
-      ctx.beginPath(); ctx.arc(p[0], p[1], r + 1.7, 0, 6.2832); ctx.fill();
-    }
-    ctx.fillStyle = fill;
-    ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 6.2832); ctx.fill();
+  // a hand: palm, two fingers, a thumb and a cuff, all along the hand direction
+  function handShape(wr, ang, w, glove, cuff, line, ghost) {
+    var r = ang * Math.PI / 180, ux = Math.sin(r), uy = Math.cos(r);
+    var nx = uy, ny = -ux;
+    var palm = [wr[0] + ux * w * 1.15, wr[1] + uy * w * 1.15];
+    // sleeve cuff ends at the wrist, then the glove takes over
+    limbS(wr, [wr[0] + ux * w * 0.35, wr[1] + uy * w * 0.35], w * 0.8, w * 0.72, 0, cuff, line, ghost);
+    limbS(wr, palm, w * 0.8, w, 0, glove, line, ghost);
+    if (ghost) return;
+    var fA = [palm[0] + ux * w * 1.1 + nx * w * 0.32, palm[1] + uy * w * 1.1 + ny * w * 0.32];
+    var fB = [palm[0] + ux * w * 1.0 - nx * w * 0.32, palm[1] + uy * w * 1.0 - ny * w * 0.32];
+    limb(palm, fA, w * 0.5, w * 0.3, 0, glove, null, line);
+    limb(palm, fB, w * 0.44, w * 0.26, 0, glove, null, line);
+    var t0 = [wr[0] + ux * w * 0.9 + nx * w * 0.5, wr[1] + uy * w * 0.9 + ny * w * 0.5];
+    var t1 = [palm[0] + nx * w * 0.92, palm[1] + ny * w * 0.92];
+    limb(t0, t1, w * 0.34, w * 0.24, 0, glove, null, line);
   }
 
-  // shoe: a wedge that points along the shin
-  function shoe(a, b, w, fill, outline) {
-    var dx = b[0] - a[0], dy = b[1] - a[1];
+  // a sneaker: sole slab, upper, ankle collar and lace ticks, laid along the
+  // ankle-to-toe vector so a pointed foot and a planted foot both read right
+  function shoe(an, toe, w, up, soleC, line, ghost) {
+    var dx = toe[0] - an[0], dy = toe[1] - an[1];
     var L = Math.sqrt(dx * dx + dy * dy) || 1;
     var ux = dx / L, uy = dy / L;
-    var px = -uy, py = ux;
-    function path(e) {
-      var W = w + e, N = w * 2.0 + e, H = w * 0.8 + e;
-      ctx.beginPath();
-      ctx.moveTo(b[0] + px * W, b[1] + py * W);
-      ctx.lineTo(b[0] + ux * N + px * W * 0.85, b[1] + uy * N + py * W * 0.85);
-      ctx.lineTo(b[0] + ux * N - px * W * 0.55, b[1] + uy * N - py * W * 0.55);
-      ctx.lineTo(b[0] - px * H, b[1] - py * H);
-      ctx.closePath();
-    }
-    if (outline) { ctx.fillStyle = outline; path(1.7); ctx.fill(); }
-    ctx.fillStyle = fill; path(0); ctx.fill();
-  }
-
-  // torso silhouette: hips, waist, chest, shoulders
-  function torsoPath(R, hipW, waistW, chestW, shW) {
-    var p = R.pelvis, n = R.neck;
-    var dx = n[0] - p[0], dy = n[1] - p[1];
-    var L = Math.sqrt(dx * dx + dy * dy) || 1;
-    var ux = dx / L, uy = dy / L;
-    var px = -uy, py = ux;
-    function at(t, w) {
-      var cx = p[0] + ux * L * t, cy = p[1] + uy * L * t;
-      return [[cx + px * w, cy + py * w], [cx - px * w, cy - py * w]];
-    }
-    var A = at(0.00, hipW), B = at(0.34, waistW), C = at(0.74, chestW), D = at(1.00, shW);
+    var heel = [an[0] - ux * w * 1.2, an[1] - uy * w * 1.2];
+    var tip = [toe[0] + ux * w * 0.45, toe[1] + uy * w * 0.45];
+    // upper
+    limbS(heel, tip, w * 0.82, w * 0.5, w * 0.12, up, line, ghost);
+    if (ghost) return;
+    // sole: a flat bar under the upper, so the shoe stands on the floor
+    capsule([heel[0], heel[1] + w * 0.42], [tip[0], tip[1] + w * 0.42], w * 0.32, w * 0.26, soleC, line);
+    // toe cap
+    ball([tip[0] - ux * w * 0.3, tip[1] - uy * w * 0.3], w * 0.34, darken(up, 0.85), null);
+    // one lace strap across the instep
+    var lx = heel[0] + (tip[0] - heel[0]) * 0.44;
+    var ly = heel[1] + (tip[1] - heel[1]) * 0.44;
+    ctx.strokeStyle = soleC;
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(A[0][0], A[0][1]);
-    ctx.lineTo(B[0][0], B[0][1]);
-    ctx.lineTo(C[0][0], C[0][1]);
-    ctx.lineTo(D[0][0], D[0][1]);
-    ctx.lineTo(D[1][0], D[1][1]);
-    ctx.lineTo(C[1][0], C[1][1]);
-    ctx.lineTo(B[1][0], B[1][1]);
-    ctx.lineTo(A[1][0], A[1][1]);
+    ctx.moveTo(lx - uy * w * 0.4, ly + ux * w * 0.4);
+    ctx.lineTo(lx + uy * w * 0.4, ly - ux * w * 0.4);
+    ctx.stroke();
+  }
+
+  // shorts: one mass around the pelvis, so the thighs grow out of a body
+  // instead of hanging off a point
+  function drawHips(R, fill, line, ghost) {
+    var ang = Math.atan2(R.neck[1] - R.pelvis[1], R.neck[0] - R.pelvis[0]) - Math.PI / 2;
+    ctx.save();
+    ctx.translate(R.pelvis[0], R.pelvis[1] + 2);
+    ctx.rotate(ang);
+    roundRect(-14.5, -10, 29, 20, 7);
+    if (line) { ctx.strokeStyle = line; ctx.lineWidth = 3; ctx.stroke(); }
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (!ghost) {
+      ctx.strokeStyle = darken(fill, 0.72);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(0, -9);
+      ctx.lineTo(0, 9);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // The trunk every torso pass shares: hip, waist-pinch, ribcage and shoulder
+  // half-widths, and the height from pelvis to shoulders.
+  var TORSO = { hip: 14.6, waist: 11.8, chest: 17.4, sh: 19.5, H: BODY.torso + 6 };
+
+  // torso silhouette: hips, waist pinch, ribcage, shoulders and a trapezius
+  // that meets the neck — a body, not a barrel
+  function torsoPath(R) {
+    var p = R.pelvis, d = R.dir, q = R.perp, H = TORSO.H;
+    function pt(t, w) {
+      return [p[0] + d[0] * H * t + q[0] * w, p[1] + d[1] * H * t + q[1] * w];
+    }
+    var aF = pt(-0.06, TORSO.hip), aB = pt(-0.06, -TORSO.hip);
+    var wF = pt(0.34, TORSO.waist), wB = pt(0.34, -TORSO.waist);
+    var cF = pt(0.78, TORSO.chest), cB = pt(0.78, -TORSO.chest);
+    var sF = pt(1.00, TORSO.sh), sB = pt(1.00, -TORSO.sh);
+    var nF = [R.neck[0] + q[0] * 3.5, R.neck[1] + q[1] * 3.5];
+    var nB = [R.neck[0] - q[0] * 3.5, R.neck[1] - q[1] * 3.5];
+    ctx.beginPath();
+    ctx.moveTo(aF[0], aF[1]);
+    ctx.quadraticCurveTo(wF[0], wF[1], cF[0], cF[1]);
+    ctx.lineTo(sF[0], sF[1]);            // ribcage to shoulder: a straight taper
+    ctx.quadraticCurveTo(nF[0], nF[1], nB[0], nB[1]);
+    ctx.quadraticCurveTo(sB[0], sB[1], cB[0], cB[1]);
+    ctx.quadraticCurveTo(wB[0], wB[1], aB[0], aB[1]);
+    ctx.quadraticCurveTo(p[0] - d[0] * H * 0.16, p[1] - d[1] * H * 0.16, aF[0], aF[1]);
     ctx.closePath();
   }
 
-  function drawHead(R, pose, c, ghost, hair, hairStreak, skin, line) {
-    var h = R.head;
-    var tilt = (pose.headT || 0) * Math.PI / 180;
+  // the far side of the torso falls into shadow so the chest reads round rather
+  // than flat; the caller has already clipped to the torso
+  function shadeBody(R, alpha) {
+    var g = ctx.createLinearGradient(R.pelvis[0] - R.perp[0] * 18, R.pelvis[1] - R.perp[1] * 18,
+                                     R.pelvis[0] + R.perp[0] * 12, R.pelvis[1] + R.perp[1] * 12);
+    g.addColorStop(0, "rgba(0,0,0," + alpha + ")");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(-300, -320, 600, 400);
+  }
 
-    // ponytail, swinging off the back of the head
-    var sway = 15 * Math.sin(beat.phase * Math.PI * 2 + c.phase);
-    var root = [h[0] - 10, h[1] - 5];
-    var a1 = 298 + (pose.lean || 0) * 0.7 + sway * 0.6;
-    var p1 = seg(root, a1, 13);
-    var p2 = seg(p1, a1 + 22 + sway * 0.5, 16);
-    capsule(root, p1, 5.6, 4.6, hair, line);
-    capsule(p1, p2, 4.6, 2.4, hair, line);
+  // the belt spans the pelvis and overhangs the hips, so it is drawn outside the
+  // torso clip; only the front of the jacket carries a buckle
+  function belt(R, buckle, band, buckleC) {
+    var ang = Math.atan2(R.neck[1] - R.pelvis[1], R.neck[0] - R.pelvis[0]) - Math.PI / 2;
+    ctx.save();
+    ctx.translate(R.pelvis[0], R.pelvis[1]);
+    ctx.rotate(ang);
+    ctx.fillStyle = band;
+    ctx.fillRect(-13, -3.4, 26, 6.4);
+    if (buckle) {
+      ctx.fillStyle = buckleC;
+      ctx.fillRect(-1.8, -3.4, 3.6, 6.4);
+    }
+    ctx.restore();
+  }
+
+  /* ---- the head ---------------------------------------------------------- */
+
+  function drawHead(R, pose, ghost, C) {
+    var h = R.head;
+    var tilt = ((pose.headT || 0) + (pose.lean || 0) * 0.2) * Math.PI / 180;
+    var away = !!C.away, angry = !!C.angry;
+    var hair = C.hair, streak = C.streak, skin = C.skin, skinLo = C.skinLo;
+    var line = C.line, tie = C.tie, eye = C.eye, band = C.band;
+    var ct = Math.cos(tilt), st = Math.sin(tilt);
+    function hp(x, y) { return [h[0] + x * ct - y * st, h[1] + x * st + y * ct]; }
+
+    // ponytail, behind the skull, swinging a beat behind the body
+    var sway = 16 * Math.sin(beat.phase * Math.PI * 2 + C.phase * 0.5);
+    var root = hp(-11, -6);
+    var a1 = -58 + (pose.lean || 0) * 0.5 + sway * 0.55;
+    var p1 = seg(root, a1, 14);
+    var p2 = seg(p1, a1 + 14 + sway * 0.5, 15);
+    var p3 = seg(p2, a1 + 30 + sway * 0.4, 11);
+    capsule(root, p1, 6.6, 5.2, hair, line);
+    capsule(p1, p2, 5.2, 3.6, hair, line);
+    capsule(p2, p3, 3.4, 1.4, hair, line);
+    if (!ghost) {
+      ball(root, 3.4, tie, line);
+      capsule([root[0] + 1, root[1] + 1], [p1[0] + 0.6, p1[1] + 0.6], 1.6, 1.2, streak, null);
+    }
 
     ctx.save();
     ctx.translate(h[0], h[1]);
     ctx.rotate(tilt);
+    // a head is roughly round: partly undo the turn's narrowing so it never
+    // becomes an oval blade mid-spin
+    var kx = Math.min(1.2, 0.9 / (C.wf || 1));
+    ctx.scale(1.1 * kx, 1.1);
 
-    ball([0, 0], 14.2, hair, line);
-
-    ctx.save();
-    ctx.beginPath(); ctx.arc(0, 0, 13.9, 0, 6.2832); ctx.clip();
-
-    // face
+    // skull and jaw
+    ctx.beginPath();
+    ctx.moveTo(-14.4, -1.4);
+    ctx.bezierCurveTo(-15.8, -14.6, 13.6, -18.2, 14.6, -1.4);
+    ctx.bezierCurveTo(15.2, 6.2, 11.4, 13.6, 5.0, 15.8);
+    ctx.bezierCurveTo(0.4, 17.2, -4.8, 15.0, -8.2, 10.4);
+    ctx.bezierCurveTo(-12.0, 5.4, -14.0, 2.4, -14.4, -1.4);
+    ctx.closePath();
+    if (line) { ctx.strokeStyle = line; ctx.lineWidth = 3; ctx.stroke(); }
     ctx.fillStyle = skin;
-    ctx.beginPath(); ctx.ellipse(4.4, 3.6, 9.8, 10.6, 0, 0, 6.2832); ctx.fill();
-
-    // hair fringe sweeping across the brow
-    ctx.fillStyle = hair;
-    ctx.beginPath();
-    ctx.moveTo(-15, -3.5);
-    ctx.quadraticCurveTo(-3, -19, 15, -5.5);
-    ctx.quadraticCurveTo(3, -11.5, -15, -3.5);
-    ctx.closePath();
     ctx.fill();
 
-    // visor band
-    ctx.fillStyle = ghost ? hair : "rgba(6,0,18,0.94)";
+    // ear
     ctx.beginPath();
-    ctx.moveTo(0.4, -4.2);
-    ctx.lineTo(13.6, -6.2);
-    ctx.lineTo(13.6, 2.2);
-    ctx.lineTo(0.4, 3.8);
-    ctx.closePath();
+    ctx.ellipse(-6.6, 2.0, 3.4, 4.4, -0.18, 0, 6.2832);
+    ctx.fillStyle = skin;
+    if (line) { ctx.strokeStyle = line; ctx.lineWidth = 2.2; ctx.stroke(); }
     ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-6.4, 2.0, 1.7, 0.7, 4.3);
+    ctx.strokeStyle = skinLo; ctx.lineWidth = 1.3; ctx.stroke();
+
+    // jaw shadow
+    if (!ghost) {
+      ctx.beginPath();
+      ctx.ellipse(6.6, 12.4, 7.4, 2.6, 0.28, 0, 6.2832);
+      ctx.fillStyle = "rgba(110,50,20,0.13)";
+      ctx.fill();
+    }
 
     if (!ghost) {
-      ctx.fillStyle = "#ffffff";
-      ctx.shadowColor = c.pal.trimGlow;
-      ctx.shadowBlur = 14;
+      // eyes: almond, iris, pupil, glint
+      function eyeShape(x, y, w, hh) {
+        ctx.beginPath();
+        ctx.ellipse(x, y, w * 0.58, hh * 0.62, 0, 0, 6.2832);
+        ctx.fillStyle = "#0b0716";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + w * 0.1, y + hh * 0.05, w * 0.36, hh * 0.44, 0, 0, 6.2832);
+        ctx.fillStyle = eye;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + w * 0.16, y + hh * 0.05, w * 0.17, hh * 0.24, 0, 0, 6.2832);
+        ctx.fillStyle = "#08030e";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x - w * 0.02, y - hh * 0.24, w * 0.15, 0, 6.2832);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+      }
+      eyeShape(3.2, -2.4, 4.6, 4.0);
+      eyeShape(9.8, -2.0, 5.4, 4.6);
+
+      // brows: level and confident on the player, dropped on the rival
+      var bt = angry ? 1.9 : 0.5;
+      ctx.strokeStyle = hair;
+      ctx.lineWidth = 2.1;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(4.6, -2.4);
-      ctx.lineTo(11.8, -3.2);
-      ctx.lineTo(11.8, -0.6);
-      ctx.lineTo(4.6, 0.2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.moveTo(0.4, -7.6 + bt);
+      ctx.lineTo(5.4, -8.4 - bt * 0.5);
+      ctx.moveTo(8.2, -8.0 - bt * 0.5);
+      ctx.lineTo(13.0, -7.0 + bt);
+      ctx.stroke();
+
+      // nose
+      ctx.strokeStyle = skinLo;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(13.4, 2.4);
+      ctx.quadraticCurveTo(14.6, 4.4, 12.6, 5.2);
+      ctx.stroke();
+
+      // mouth
+      ctx.strokeStyle = "rgba(70,20,30,0.85)";
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      if (angry) {
+        ctx.moveTo(6.4, 9.6);
+        ctx.quadraticCurveTo(9.0, 8.2, 11.6, 9.8);
+        ctx.moveTo(6.4, 9.6);
+        ctx.quadraticCurveTo(9.0, 11.0, 11.6, 9.8);
+      } else {
+        ctx.moveTo(6.0, 9.2);
+        ctx.quadraticCurveTo(9.2, 11.4, 12.2, 8.6);
+      }
+      ctx.stroke();
     }
+
+    if (away && !ghost) {
+      // on the away half of a turn we see the back of the head: the hair mass
+      // simply covers the face, which reads as a real turn rather than a mirror
+      ball([0.5, 0.6], 14.6, hair, line);
+    }
+
+    // hair: a swept mass with a spiky fringe across the brow
+    ctx.beginPath();
+    ctx.moveTo(-14.8, 3.4);
+    ctx.quadraticCurveTo(-17.6, -11.6, -3.8, -17.4);
+    ctx.quadraticCurveTo(10.6, -21.4, 16.0, -6.6);
+    ctx.lineTo(11.0, -10.2);
+    ctx.lineTo(10.2, -4.4);
+    ctx.lineTo(5.8, -9.4);
+    ctx.lineTo(3.2, -2.8);
+    ctx.lineTo(-1.8, -8.8);
+    ctx.lineTo(-5.0, -1.2);
+    ctx.lineTo(-10.0, -6.4);
+    ctx.closePath();
+    ctx.fillStyle = hair;
+    if (line) { ctx.strokeStyle = line; ctx.lineWidth = 2.4; ctx.stroke(); }
+    ctx.fill();
+
+    // headband with trailing tails
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-16, -12.5, 33, 5.4);
+    ctx.clip();
+    ctx.fillStyle = band;
+    ctx.fillRect(-16, -12.5, 33, 4.2);
     ctx.restore();
 
-    // hair streak
-    ctx.strokeStyle = ghost ? hair : hairStreak;
-    ctx.lineWidth = 3.2;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(-7, -12.5);
-    ctx.quadraticCurveTo(1, -18, 9.5, -11.5);
-    ctx.stroke();
+    if (!ghost) {
+      // streak of light through the fringe
+      ctx.strokeStyle = streak;
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-8.4, -13.4);
+      ctx.quadraticCurveTo(1.6, -18.6, 10.2, -12.4);
+      ctx.stroke();
+    }
 
     ctx.restore();
   }
@@ -1477,13 +1792,18 @@
   /* ---- the figure -------------------------------------------------------- */
 
   function drawFigure(c, pose, x, y, facing, ghost) {
-    var R = rig(pose);
-    // a spin is faked as a horizontal squash; past 90deg the character is
-    // mirrored, so the near and far limbs swap over
+    // A spin is a turn, not a squash. The figure keeps at least 62% of its
+    // width (a body seen edge-on still has depth), the shoulder and hip sockets
+    // fold towards the spine, the near and far limbs swap past 90deg, and on the
+    // away half we see the back of the head rather than a face. Nothing ever
+    // collapses into a slab.
     var cs = Math.cos((pose.spin || 0) * Math.PI / 180);
+    var depth = Math.abs(cs);
     var flip = cs < 0;
-    var sx = facing * CHAR_SCALE * cs;
-    if (Math.abs(cs) < 0.16) sx = facing * CHAR_SCALE * 0.16;
+    var wf = 0.62 + 0.38 * depth;
+    var away = cs < -0.12;
+    var sx = facing * CHAR_SCALE * wf * (flip ? -1 : 1);
+    var R = rig(pose, depth);
 
     ctx.save();
     ctx.translate(x, GROUND_Y - y);
@@ -1496,63 +1816,144 @@
 
     var pal = c.pal;
     var hurt = !ghost && c.flash > 0;
-    var suit, suitFar, trim, hair, hairStreak, skin, shoeC;
+    var coat, coatHi, coatLo, pants, pantsLo, trim, glove;
+    var hair, streak, skin, skinLo, boot, bootLo, sole, line, eye, tie;
+
     if (ghost) {
-      suit = suitFar = trim = hair = hairStreak = skin = shoeC = pal.ghost;
+      coat = coatHi = coatLo = pants = pantsLo = trim = glove = pal.ghost;
+      hair = streak = skin = skinLo = boot = bootLo = sole = eye = tie = pal.ghost;
+      line = null;
     } else if (hurt) {
-      suit = pal.flash; suitFar = pal.flashFar; trim = "#ffffff";
-      hair = pal.hair; hairStreak = "#ffffff"; skin = "#fff2fa"; shoeC = pal.flashFar;
+      coat = pal.flash; coatHi = "#ffffff"; coatLo = pal.flashFar;
+      pants = pal.flashFar; pantsLo = pal.flashFar;
+      trim = "#ffffff"; glove = "#ffffff";
+      hair = pal.hair; streak = "#ffffff";
+      skin = "#fff4fb"; skinLo = "#f0c6db";
+      boot = pal.flashFar; bootLo = pal.flashFar; sole = pal.shoe;
+      eye = "#ffffff"; tie = "#ffffff";
+      line = "rgba(4,0,14,0.9)";
     } else {
-      suit = pal.suit; suitFar = pal.suitFar; trim = pal.trim;
-      hair = pal.hair; hairStreak = pal.hairStreak; skin = pal.skin; shoeC = pal.shoe;
+      coat = pal.suit; coatHi = pal.suitHi; coatLo = pal.suitLo;
+      pants = pal.pants; pantsLo = pal.pantsLo;
+      trim = pal.trim; glove = pal.glove;
+      hair = pal.hair; streak = pal.hairStreak;
+      skin = pal.skin; skinLo = pal.skinLo;
+      boot = pal.boot; bootLo = pal.bootLo; sole = pal.sole;
+      eye = pal.trimGlow; tie = pal.hairTie;
+      line = "rgba(4,0,14,0.92)";
     }
-    var line = ghost ? null : "rgba(4,0,14,0.9)";
 
-    // far side
-    capsule(farLeg.hip, farLeg.kn, 10.2, 7.8, suitFar, line);
-    capsule(farLeg.kn, farLeg.ft, 7.8, 5.8, suitFar, line);
-    shoe(farLeg.kn, farLeg.ft, 6.0, suitFar, line);
-    capsule(farArm.sh, farArm.el, 8.2, 6.8, suitFar, line);
-    capsule(farArm.el, farArm.hd, 6.8, 5.2, suitFar, line);
-    ball(farArm.hd, 5.0, suitFar, line);
+    // ---- far side, behind the body -------------------------------------
+    limbS(farLeg.hip, farLeg.kn, 12.4, 9.2, 1.6, pantsLo, line, ghost);
+    limbS(farLeg.kn, farLeg.an, 9.4, 6.6, 2.0, pantsLo, line, ghost);
+    shoe(farLeg.an, farLeg.toe, 6.2, bootLo, sole, line, ghost);
+    limbS(farArm.sh, farArm.el, 9.4, 7.6, 1.2, coatLo, line, ghost);
+    limbS(farArm.el, farArm.wr, 7.6, 5.8, 1.4, coatLo, line, ghost);
+    handShape(farArm.wr, farArm.ang, 5.0, darken(glove, 0.78), coatLo, line, ghost);
 
-    // torso
-    torsoPath(R, 11.6, 9.6, 14.6, 15.6);
+    // ---- near leg and hips, still under the jacket ----------------------
+    limbS(nearLeg.hip, nearLeg.kn, 13.2, 9.6, 1.7, pants, line, ghost);
+    limbS(nearLeg.kn, nearLeg.an, 10.0, 6.8, 2.1, pants, line, ghost);
+    shoe(nearLeg.an, nearLeg.toe, 6.4, boot, sole, line, ghost);
+    drawHips(R, pants, line, ghost);
+
+    // ---- torso ----------------------------------------------------------
+    torsoPath(R);
     if (line) { ctx.strokeStyle = line; ctx.lineWidth = 3.4; ctx.stroke(); }
-    ctx.fillStyle = suit;
-    ctx.fill();
+    if (ghost) {
+      ctx.fillStyle = coat;
+      ctx.fill();
+    } else {
+      var tg = ctx.createLinearGradient(R.pelvis[0] + R.perp[0] * 20, R.pelvis[1] + R.perp[1] * 20,
+                                        R.pelvis[0] - R.perp[0] * 20, R.pelvis[1] - R.perp[1] * 20);
+      tg.addColorStop(0, coatHi);
+      tg.addColorStop(0.4, coat);
+      tg.addColorStop(1, coatLo);
+      ctx.fillStyle = tg;
+      ctx.fill();
 
-    // costume: centre stripe clipped to the torso
-    ctx.save();
-    torsoPath(R, 11.6, 9.6, 14.6, 15.6);
-    ctx.clip();
-    ctx.strokeStyle = trim;
-    ctx.lineWidth = 2.6;
-    ctx.beginPath();
-    ctx.moveTo(R.pelvis[0], R.pelvis[1]);
-    ctx.lineTo(R.neck[0], R.neck[1]);
-    ctx.stroke();
-    ctx.restore();
+      // One clipped pass for both faces of the jacket. A turn shows either the
+      // back's tailoring or the front's shirt and lapels, never both, so they
+      // share the clip, the side shading and the belt instead of each
+      // rebuilding them.
+      ctx.save();
+      torsoPath(R);
+      ctx.clip();
+      if (away) {
+        // back of the jacket: a shoulder yoke and centre seam, kept
+        // low-contrast so it reads as tailoring rather than a panel stuck on
+        shadeBody(R, 0.3);
+        ctx.strokeStyle = "rgba(0,0,0,0.22)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(R.neck[0] - R.perp[0] * 15, R.neck[1] - R.perp[1] * 15);
+        ctx.quadraticCurveTo(R.pelvis[0] + R.dir[0] * TORSO.H * 0.66,
+                             R.pelvis[1] + R.dir[1] * TORSO.H * 0.66,
+                             R.neck[0] + R.perp[0] * 15, R.neck[1] + R.perp[1] * 15);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(0,0,0,0.16)";
+        ctx.beginPath();
+        ctx.moveTo(R.neck[0] + R.dir[0] * TORSO.H * 0.34, R.neck[1] + R.dir[1] * TORSO.H * 0.34);
+        ctx.lineTo(R.pelvis[0] + R.dir[0] * TORSO.H * 0.08, R.pelvis[1] + R.dir[1] * TORSO.H * 0.08);
+        ctx.stroke();
+      } else {
+        // the V of the open jacket, worn by the singlet and the lapels alike
+        var shirtW = 8.4;
+        var tip = [R.pelvis[0] + R.dir[0] * TORSO.H * 0.56, R.pelvis[1] + R.dir[1] * TORSO.H * 0.56];
+        var vF = [R.neck[0] + R.perp[0] * shirtW, R.neck[1] + R.perp[1] * shirtW];
+        var vB = [R.neck[0] - R.perp[0] * shirtW, R.neck[1] - R.perp[1] * shirtW];
 
-    // belt
-    var ang = Math.atan2(R.neck[1] - R.pelvis[1], R.neck[0] - R.pelvis[0]) - Math.PI / 2;
-    ctx.save();
-    ctx.translate(R.pelvis[0], R.pelvis[1]);
-    ctx.rotate(ang);
-    ctx.fillStyle = trim;
-    ctx.fillRect(-12, -2.8, 24, 5.2);
-    ctx.restore();
+        // singlet showing through
+        ctx.beginPath();
+        ctx.moveTo(vF[0], vF[1]);
+        ctx.lineTo(tip[0], tip[1]);
+        ctx.lineTo(vB[0], vB[1]);
+        ctx.closePath();
+        ctx.fillStyle = pal.shirt;
+        ctx.fill();
 
-    // near side
-    capsule(nearLeg.hip, nearLeg.kn, 11.2, 8.4, suit, line);
-    capsule(nearLeg.kn, nearLeg.ft, 8.4, 6.2, suit, line);
-    shoe(nearLeg.kn, nearLeg.ft, 6.4, shoeC, line);
+        // the jacket folds back into a lapel
+        ctx.fillStyle = coatHi;
+        ctx.beginPath();
+        ctx.moveTo(vF[0], vF[1]);
+        ctx.lineTo(R.neck[0] + R.perp[0] * 16, R.neck[1] + R.perp[1] * 16);
+        ctx.lineTo(R.pelvis[0] + R.dir[0] * TORSO.H * 0.42 + R.perp[0] * 9,
+                   R.pelvis[1] + R.dir[1] * TORSO.H * 0.42 + R.perp[1] * 9);
+        ctx.lineTo(tip[0], tip[1]);
+        ctx.closePath();
+        ctx.fill();
 
-    drawHead(R, pose, c, ghost, hair, hairStreak, skin, line);
+        // trim piping down the lapel edge
+        ctx.strokeStyle = trim;
+        ctx.lineWidth = 1.8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(vF[0], vF[1]);
+        ctx.lineTo(tip[0], tip[1]);
+        ctx.moveTo(vB[0], vB[1]);
+        ctx.lineTo(tip[0], tip[1]);
+        ctx.stroke();
 
-    capsule(nearArm.sh, nearArm.el, 9.2, 7.5, suit, line);
-    capsule(nearArm.el, nearArm.hd, 7.5, 5.7, suit, line);
-    ball(nearArm.hd, 5.4, trim, line);
+        shadeBody(R, 0.34);
+      }
+      ctx.restore();
+
+      belt(R, !away, darken(pal.pants, 0.55), trim);
+    }
+
+    // neck
+    capsule(R.neck, [R.neck[0] + R.dir[0] * 7, R.neck[1] + R.dir[1] * 7], 6.2, 6.6, skin, line);
+
+    // ---- near side, in front -------------------------------------------
+    drawHead(R, pose, ghost, {
+      hair: hair, streak: streak, skin: skin, skinLo: skinLo,
+      line: line, tie: tie, eye: eye, band: ghost ? pal.ghost : pal.trim,
+      angry: pal.angry, phase: c.phase, wf: wf, away: away
+    });
+
+    limbS(nearArm.sh, nearArm.el, 10.0, 8.0, 1.3, coat, line, ghost);
+    limbS(nearArm.el, nearArm.wr, 8.0, 6.0, 1.5, coat, line, ghost);
+    handShape(nearArm.wr, nearArm.ang, 5.4, glove, coat, line, ghost);
 
     ctx.restore();
   }
@@ -1578,7 +1979,7 @@
     for (var i = 0; i < n - 1; i++) {
       var hh = c.hist[i];
       var age = (n - 1 - i) / n;
-      ctx.globalAlpha = 0.17 * (1 - age) * strength;
+      ctx.globalAlpha = 0.13 * (1 - age) * strength;
       drawFigure(c, hh.pose, hh.x, hh.y, hh.facing, true);
     }
     ctx.restore();
@@ -2168,12 +2569,17 @@ window.addEventListener("error", function () { window.__bootError = true; });
   button,.btn{border-radius:20px !important}
   input,textarea,select{border-radius:18px !important}
   .card,[class*="card"]{border-radius:22px !important}
-  button:not(.ghost):not(.tab){background:var(--acc) !important}
-  /* The repaint above gives every bare button the accent surface. Without a label
-     to match, the button keeps the colour its own rule was written for: dark ink
-     on #b42062 (3.2:1) in light, white on #e5639d (3.2:1) in dark. */
-  html[data-theme="light"] button:not(.ghost):not(.tab){color:#ffffff !important}
+  /* the fallback matters: with no data-theme (the default) --acc is undefined,
+     and an undefined var() makes the declaration invalid, which left the Start
+     button transparent with dark ink on it. */
+  button:not(.ghost):not(.tab):not(#save-data){background:var(--acc,#e5639d) !important}
+  /* The repaint above gives every bare button the accent surface, so the ink has
+     to be named too. Until a theme is set the page is on the same #e5639d as
+     dark, and #muteBtn's own white label only reached 3.2:1 on it; dark ink
+     clears 6:1 there, and white clears 6:1 on the light accent #b42062. */
+  html:not([data-theme]) button:not(.ghost):not(.tab),
   html[data-theme="dark"] button:not(.ghost):not(.tab){color:#1a0512 !important}
+  html[data-theme="light"] button:not(.ghost):not(.tab){color:#ffffff !important}
 </style>
 </body>
 </html>

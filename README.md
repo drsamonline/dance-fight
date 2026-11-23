@@ -129,10 +129,12 @@ The result is a beat grid. During play the dance phase is read *straight off the
 On test tracks at 100, 128 and 150 BPM the detected tempo was exact, and **97% of kicks landed within
 30 ms of a grid beat** (median offset 5–9 ms, which is just the 10 ms hop resolution).
 
-Everything else is drawn on a forward-kinematic skeleton. Moves are keyframed joint angles blended *over*
-the ongoing dance groove rather than replacing it, so the character keeps dancing while it fights. Spins
-are faked as a horizontal squash that mirrors past 90°, with the near and far limbs swapping — and every
-attack leaves additive ghost trails of the last few poses, which is what makes a rotation read as motion.
+Everything else is drawn on a forward-kinematic skeleton with wrists, hands and feet. Moves are keyframed
+joint angles blended *over* the ongoing dance groove rather than replacing it, so the character keeps
+dancing while it fights. A spin is drawn as a turn rather than a squash: the body never narrows past 62%,
+the shoulder and hip sockets fold towards the spine, the near and far limbs swap past 90°, and on the away
+half you see the back of the head instead of a face — and every attack leaves additive ghost trails of the
+last few poses, which is what makes a rotation read as motion.
 
 ---
 
