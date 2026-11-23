@@ -3,10 +3,10 @@
   "locked": false,
   "files": {
     "README.md": {
-      "sha": "e6ed217f6d473113a4f3c3082ad25f2c4208c60f",
+      "sha": "0575162ef5dbb9477a44cebb91efaf2ba014fceb",
       "producer": "buffalo@2026-11-23",
       "class": "generated",
-      "at": "2026-11-23T05:35:44Z"
+      "at": "2026-11-23T06:36:50Z"
     },
     "docs/index.html": {
       "sha": "34f37e265d7b418d63721d38440038f01d2605f4",
@@ -15,10 +15,10 @@
       "at": "2026-11-14T18:06:20Z"
     },
     "docs/play/index.html": {
-      "sha": "c2d89b27bb4e76a2a3bf04cd09c78bf659cae33c",
-      "producer": "human",
+      "sha": "b9f2c854a09a087fef30a56721b09f65af1d0753",
+      "producer": "buffalo@2026-11-23",
       "class": "hand",
-      "at": "2026-11-23T05:35:44Z"
+      "at": "2026-11-23T06:37:00Z"
     },
     ".github/workflows/build-apps.yml": {
       "sha": "65d8211f28b9bb0492a0bdc9831c013ab6bc6621",
@@ -27,10 +27,10 @@
       "at": "2026-11-10T15:12:04Z"
     },
     "CHANGELOG.md": {
-      "sha": "5423869e8b8abb9c3054c143658cb443854a9203",
+      "sha": "4634069bd3a3738d85523d6be9a057661a7f1465",
       "producer": "buffalo@2026-11-23",
       "class": "agent",
-      "at": "2026-11-23T05:35:26Z"
+      "at": "2026-11-23T06:37:00Z"
     },
     "tools/contrast.py": {
       "sha": "72724051ccdfadd4fd67e28bcb7b9e76bee4d515",
@@ -79,7 +79,13 @@
       "producer": "buffalo@2026-11-23",
       "class": "agent",
       "at": "2026-11-23T05:35:26Z"
+    },
+    "tools/calib-check.mjs": {
+      "sha": "103f92689cdf48db5257a02118007f612d5c0095",
+      "producer": "buffalo@2026-11-23",
+      "class": "agent",
+      "at": "2026-11-23T06:36:50Z"
     }
   },
-  "updated": "2026-11-23T05:35:44Z"
+  "updated": "2026-11-23T06:37:00Z"
 }
