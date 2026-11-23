@@ -68,10 +68,12 @@
 A single-file browser game. No build step, no dependencies, no install, no server.
 
 ```
-index.html    # the entire game — HTML, CSS, JS, ~78 KB
+docs/play/index.html        # the entire game — HTML, CSS, JS
 ```
 
-Open it, pick a song, fight. It works offline and from `file://` too.
+Open that file, pick a song, fight. It works offline and from `file://` too. Served from the
+web, it installs as an app: the page registers a service worker that keeps the game playable
+with no connection, and `manifest.webmanifest` gives it a name and an icon.
 
 ### Highlights
 
@@ -85,6 +87,8 @@ Open it, pick a song, fight. It works offline and from `file://` too.
   Shuffle-stepping in time charges your finisher meter.
 - **Keyboard and touch.** On-screen controls appear automatically on phones.
 - **One file, zero dependencies.** No framework, no bundler, no CDN.
+- **Built for the room you're in.** A click of latency calibration, a rival that telegraphs what
+  it is about to do, three difficulty settings, and a visual beat pulse for playing muted.
 
 ---
 
@@ -102,12 +106,28 @@ Pick an audio file (or just press Start and it plays a default 128 BPM groove).
 | `L` | **Body-Roll Uppercut** | Heavy — rolls through a full turn |
 | `SPACE` | **Body-Roll Finisher** | Needs a full meter — a 720° spin |
 | `P` | Pause / resume music | |
+| `R` | Re-lock the tempo | Re-listens to the next few bars and re-fits the beat grid |
 
 **Land moves on the beat.** A move thrown within ~80 ms of a beat lands as a PERFECT: 1.6× damage and a
 bigger combo multiplier. The gold `· ON BEAT` tag on the move name tells you when you nailed it.
 
 **On a phone:** on-screen controls appear automatically. Hold a direction with one thumb and tap attacks
-with the other. Rotate to landscape — the arena is wider than it is tall.
+with the other. Landscape fits the whole arena; portrait crops the empty sides and frames the two dancers
+instead of shrinking the 16:9 stage into a thumbnail.
+
+**If your hits feel off,** open the start screen and tap **Tap to calibrate** six times along with the
+practice groove. Each tap measures how far it landed from the nearest beat, and the median becomes your
+offset — the judgement window moves to where *you* hear the beat, which is what Bluetooth headphones and
+slow output latency need. It is stored locally and can also be dragged by hand from −200 to +200 ms.
+
+**No track handy?** Press **Play** next to *Practice groove* and the game synthesises a four-bar
+kick/snare/hat/bass loop at 100, 120, 128 or 140 BPM. Its beat grid is exact by construction, so it is
+also the cleanest way to feel what an on-beat hit is supposed to be.
+
+**Difficulty** changes the rival only — how often it commits, how fast it closes, how well it guards and
+how hard it hits. Your own damage and the beat scoring are identical on every setting, so a PERFECT is
+worth the same on Easy as on Hard. Bests, wins and settings stay on the device; the end screen can draw
+the result to a PNG you can share.
 
 ---
 
@@ -136,6 +156,25 @@ the shoulder and hip sockets fold towards the spine, the near and far limbs swap
 half you see the back of the head instead of a face — and every attack leaves additive ghost trails of the
 last few poses, which is what makes a rotation read as motion.
 
+<p align="center"><img src="docs/assets/finisher.svg" alt="The Body-Roll Finisher, sampled at 14 poses" width="720"></p>
+
+That clip is not a video. It is `docs/assets/finisher.svg`, generated from the game's own keyframes by
+`node tools/filmstrip.mjs`: the rig is sampled 14 times through the finisher's 1.05 s and each frame is
+drawn from the same joint angles the canvas uses. Regenerate it whenever a move changes.
+
+## Checks
+
+Two dependency-free gates run against the same single file:
+
+```bash
+node tools/rig-check.mjs      # skeleton invariants: bone lengths, finite joints, spin direction, stage bounds
+python3 tools/contrast.py     # WCAG ratios for every ink/surface pair the theme block paints
+```
+
+`rig-check` extracts the pure `RIG-LIB` block from the HTML and runs it in a sandbox — no browser, no
+build, the same verdict every time. `contrast.py` reads the shipped CSS and fails if a label drops under
+AA. Both exit non-zero, so either can gate a commit.
+
 ---
 
 ## Run it locally
@@ -143,13 +182,14 @@ last few poses, which is what makes a rotation read as motion.
 ```bash
 git clone https://github.com/drsamonline/dance-fight.git
 cd dance-fight
-open index.html          # macOS   (xdg-open on Linux, start on Windows)
+open docs/play/index.html      # macOS   (xdg-open on Linux, start on Windows)
 ```
 
-No toolchain needed. To serve it instead:
+No toolchain needed. To serve it instead — which is what the live demo does, and the only way the
+service worker and install prompt will work:
 
 ```bash
-python3 -m http.server 8000   # then visit http://localhost:8000
+python3 -m http.server 8000    # then visit http://localhost:8000/docs/play/
 ```
 
 ---
@@ -161,9 +201,16 @@ Being straight about what this is and isn't:
 - **Autoplay.** Browsers block audio until you interact with the page, so the first tap or click unlocks
   sound. If you ever hear nothing, a **live level meter** under the BPM readout shows whether audio is
   actually flowing — and a banner appears if it isn't. That meter reads real signal, not a flag.
-- **Tempo lock is at load.** A track with a long ambient intro, or one that drifts tempo, gets a grid based
-  on the overall character of the song. If no clear pulse is found it falls back to a steady 128 BPM.
-- **Mobile is landscape.** It's playable in portrait, but the arena is 16:9 and it will be cramped.
+- **Tempo lock starts at load.** A track with a long ambient intro, or one that drifts tempo, gets a grid
+  based on the first two minutes. Press `R` (or **RE-LOCK** in the corner) to re-analyse the next few bars
+  and re-fit the grid from the playhead without restarting the track. If no clear pulse is found at all it
+  falls back to a steady 128 BPM.
+- **Portrait is cropped, not re-laid-out.** Phone portrait zooms into the middle 480 units of the arena so
+  the dancers are legible, which means the outer thirds of the stage are off-screen. Landscape shows all
+  of it.
+- **Analysis blocks for a moment.** It is chunked so the progress bar moves and the tab stays responsive
+  between stages, but the heavy stages still run on the main thread — a very long file can hitch for a
+  fraction of a second per stage.
 - **Feel is unverified at 60fps.** The geometry, timing and beat grid were verified programmatically, but
   I could only test in a headless browser rendering a few frames per second. How the spins and trails feel
   in motion is the part you're the judge of.

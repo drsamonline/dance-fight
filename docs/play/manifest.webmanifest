@@ -1,0 +1,16 @@
+{
+  "name": "Dance Fight",
+  "short_name": "Dance Fight",
+  "description": "Every fight move is a dance move. Load a track, the beat is analysed, and landing on it makes every hit a PERFECT.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#05010d",
+  "theme_color": "#140812",
+  "categories": ["games", "music"],
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
