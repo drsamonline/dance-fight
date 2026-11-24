@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Both arms survive every move.** The far arm's rim light was only ever checked in two frames of the finisher.
+  `tools/frame-strip.mjs` now samples every move against the groove — the pose the game actually resolves — and
+  measures how much of the far arm is left once the torso, head and near limbs are drawn over it; it writes the
+  whole set to `docs/assets/moves.svg` with both fighters. It caught the Spinning Kick's wind-up hanging the far
+  arm inside the torso at profile; that keyframe now sweeps the arm forward instead, and every sampled pose keeps
+  a visible slice of both arms.
 - **A tempo-independent judgement window.** The PERFECT window was a fraction of a beat (17%), so it was
   ~170 ms wide at 60 BPM and ~57 ms at 180 BPM — the same move counted as in time on a slow track and late
   on a fast one. It is now 80 ms of real time at any tempo, clamped to 8–26% of a beat, so "on beat" means

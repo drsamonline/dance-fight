@@ -180,7 +180,7 @@ drawn from the same joint angles the canvas uses. Regenerate it whenever a move 
 
 ## Checks
 
-Six dependency-free gates run against the same single file:
+Seven dependency-free gates run against the same single file:
 
 ```bash
 node tools/rig-check.mjs      # skeleton invariants: bone lengths, finite joints, spin direction, stage bounds
@@ -188,6 +188,7 @@ node tools/calib-check.mjs    # judgement and calibration: window, grades, stric
 node tools/beat-check.mjs     # beat analysis on synthetic tracks: tempo, phase, intros, drift, drop, refusals
 node tools/fight-check.mjs    # combat maths and a simulated round: damage, combo cap, difficulty, pacing
 node tools/ver-check.mjs      # APP_VER matches the changelog and the worker's cache really is versioned
+node tools/frame-strip.mjs    # every move, both fighters: neither far arm disappears behind the torso
 python3 tools/contrast.py     # WCAG ratios for every ink/surface pair the theme block paints
 ```
 

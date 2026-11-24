@@ -3,10 +3,10 @@
   "locked": false,
   "files": {
     "README.md": {
-      "sha": "43233d1fee7c1f2ff39a2fba393de306ca44749b",
+      "sha": "5154d43627e0f0e86bdcddc48895f75f5e161e35",
       "producer": "agent",
       "class": "generated",
-      "at": "2026-11-23T12:55:18Z"
+      "at": "2026-11-24T07:46:52Z"
     },
     "docs/index.html": {
       "sha": "34f37e265d7b418d63721d38440038f01d2605f4",
@@ -103,7 +103,19 @@
       "producer": "agent",
       "class": "agent",
       "at": "2026-11-23T12:55:18Z"
+    },
+    "tools/frame-strip.mjs": {
+      "sha": "887eb1ef52dbcbbe08150e3e8cfdfa1a96c6a291",
+      "producer": "agent",
+      "class": "agent",
+      "at": "2026-11-24T07:46:52Z"
+    },
+    "docs/assets/moves.svg": {
+      "sha": "9879479d30d5e7fc48ff4d38e03f68aebfdb9e4c",
+      "producer": "agent",
+      "class": "agent",
+      "at": "2026-11-24T07:46:52Z"
     }
   },
-  "updated": "2026-11-24T02:14:56Z"
+  "updated": "2026-11-24T07:46:52Z"
 }
