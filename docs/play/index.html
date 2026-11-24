@@ -1594,6 +1594,44 @@
     shW: 37, armU: 33, armL: 30
   };
 
+  // The trunk every torso pass shares: hip, waist-pinch, ribcage and shoulder
+  // half-widths, and the height from pelvis to shoulders.
+  var TORSO = { hip: 14.6, waist: 11.8, chest: 17.4, sh: 19.5, H: BODY.torso + 6 };
+
+  // The rest of the silhouette: every width, radius and path the figure is
+  // built from. drawFigure/drawHead/drawHips use these, and
+  // tools/frame-strip.mjs measures the same numbers, so the arm-visibility
+  // check reads the body that is actually drawn instead of keeping a copy that
+  // can drift. Pure data — no canvas in here.
+  var SHAPE = {
+    outline: 1.9,               // limb() traces its dark outline this far out
+    rim: 3.6,                   // farLimb() widens the far side by this much
+    far: {
+      legHip: [12.4, 9.2, 1.6], legKn: [9.4, 6.6, 2.0],
+      armSh: [9.4, 7.6, 1.2], armEl: [7.6, 5.8, 1.4], hand: 5.0
+    },
+    near: {
+      legHip: [13.2, 9.6, 1.7], legKn: [10.0, 6.8, 2.1],
+      armSh: [10.0, 8.0, 1.3], armEl: [8.0, 6.0, 1.5], hand: 5.4
+    },
+    neck: { wa: 6.2, wb: 6.6, len: 7 },
+    hips: { x: -14.5, y: -10, w: 29, h: 20, r: 7, drop: 2 },
+    head: {
+      scale: 1.1,
+      skull: [[-14.4, -1.4], [-15.8, -14.6, 13.6, -18.2, 14.6, -1.4],
+              [15.2, 6.2, 11.4, 13.6, 5.0, 15.8],
+              [0.4, 17.2, -4.8, 15.0, -8.2, 10.4],
+              [-12.0, 5.4, -14.0, 2.4, -14.4, -1.4]],
+      band: { x: -16, y: -12.5, w: 33, h: 4.2, clip: 5.4 },
+      hair: {
+        start: [-14.8, 3.4],
+        arcs: [[-17.6, -11.6, -3.8, -17.4], [10.6, -21.4, 16.0, -6.6]],
+        fringe: [[11.0, -10.2], [10.2, -4.4], [5.8, -9.4], [3.2, -2.8],
+                 [-1.8, -8.8], [-5.0, -1.2], [-10.0, -6.4]]
+      }
+    }
+  };
+
   function seg(p, aDeg, len) {
     var r = aDeg * Math.PI / 180;
     return [p[0] + Math.sin(r) * len, p[1] + Math.cos(r) * len];
@@ -1778,10 +1816,10 @@
       dmg: 11, reach: 140, meter: 12, kb: 130,
       keys: [
         [0.00, { lean: -8, pelvisY: 90, legFU: 16, legFL: 6, armFU: 40,
-                 armFL: 62, armBU: -30, armBL: -48 }, 0, 0],
+                 armFL: 62, armBU: -110, armBL: -120 }, 0, 0],
         [0.20, { lean: -16, pelvisY: 86, legFU: 42, legFL: 10, legFF: 70,
-                 legBU: -24, legBL: -10, armFU: 100, armFL: 60, armBU: 56,
-                 armBL: 74, headT: -8 }, 0.85, -110],
+                 legBU: -24, legBL: -10, armFU: 100, armFL: 60, armBU: -80,
+                 armBL: -60, headT: -8 }, 0.85, -110],
         [0.40, { lean: -27, pelvisY: 84, legFU: 68, legFL: 36, legFF: 66,
                  legBU: -14, legBL: -6, armBU: 78, armBL: 98, armFU: -74,
                  armFL: -98, headT: -12 }, 1, -220],
@@ -1801,13 +1839,13 @@
         [0.00, { lean: 16, pelvisY: 84, armFU: 8, armFL: -24, armBU: -6,
                  armBL: -30, headT: 12, legFU: 26, legFL: 20, legFF: 68 }, 0, 0],
         [0.16, { lean: 25, pelvisY: 78, armFU: -26, armFL: -48, armFW: 22,
-                 armBW: 20, headT: 17, legFU: 32, legFL: 26, legFF: 64,
-                 legBU: -18, legBL: -12 }, 0.9, -60],
+                 armBU: -90, armBL: -110, armBW: 20, headT: 17, legFU: 32,
+                 legFL: 26, legFF: 64, legBU: -18, legBL: -12 }, 0.9, -60],
         [0.36, { lean: -12, pelvisY: 104, armFU: 150, armFL: 168, armFW: -20,
                  armBU: -40, armBL: -30, headT: -10, legFU: -4, legFL: 4,
                  legFF: 92, legBU: 6, legBL: 2, shrugF: 5 }, 1, -190],
         [0.56, { lean: -6, pelvisY: 100, armFU: 132, armFL: 150, armFW: 8,
-                 armBU: -22, armBL: -6 }, 1, -270],
+                 armBU: -90, armBL: -110 }, 1, -270],
         [1.00, { lean: 0, pelvisY: 96, armFU: -16, armFL: -20, armFW: 0,
                  armBU: 16, armBL: 20 }, 0, -360]
       ]
@@ -2579,7 +2617,8 @@
     ctx.save();
     ctx.translate(R.pelvis[0], R.pelvis[1] + 2);
     ctx.rotate(ang);
-    roundRect(-14.5, -10, 29, 20, 7);
+    var hips = SHAPE.hips;
+    roundRect(hips.x, hips.y, hips.w, hips.h, hips.r);
     if (line) { ctx.strokeStyle = line; ctx.lineWidth = 3; ctx.stroke(); }
     ctx.fillStyle = fill;
     ctx.fill();
@@ -2593,10 +2632,6 @@
     }
     ctx.restore();
   }
-
-  // The trunk every torso pass shares: hip, waist-pinch, ribcage and shoulder
-  // half-widths, and the height from pelvis to shoulders.
-  var TORSO = { hip: 14.6, waist: 11.8, chest: 17.4, sh: 19.5, H: BODY.torso + 6 };
 
   // torso silhouette: hips, waist pinch, ribcage, shoulders and a trapezius
   // that meets the neck — a body, not a barrel
@@ -2681,15 +2716,16 @@
     // a head is roughly round: partly undo the turn's narrowing so it never
     // becomes an oval blade mid-spin
     var kx = Math.min(1.2, 0.9 / (C.wf || 1));
-    ctx.scale(1.1 * kx, 1.1);
+    ctx.scale(SHAPE.head.scale * kx, SHAPE.head.scale);
 
     // skull and jaw
+    var skull = SHAPE.head.skull;
     ctx.beginPath();
-    ctx.moveTo(-14.4, -1.4);
-    ctx.bezierCurveTo(-15.8, -14.6, 13.6, -18.2, 14.6, -1.4);
-    ctx.bezierCurveTo(15.2, 6.2, 11.4, 13.6, 5.0, 15.8);
-    ctx.bezierCurveTo(0.4, 17.2, -4.8, 15.0, -8.2, 10.4);
-    ctx.bezierCurveTo(-12.0, 5.4, -14.0, 2.4, -14.4, -1.4);
+    ctx.moveTo(skull[0][0], skull[0][1]);
+    for (var si = 1; si < skull.length; si++) {
+      ctx.bezierCurveTo(skull[si][0], skull[si][1], skull[si][2], skull[si][3],
+                        skull[si][4], skull[si][5]);
+    }
     ctx.closePath();
     if (line) { ctx.strokeStyle = line; ctx.lineWidth = 3; ctx.stroke(); }
     ctx.fillStyle = skin;
@@ -2779,17 +2815,16 @@
     }
 
     // hair: a swept mass with a spiky fringe across the brow
+    var hairShape = SHAPE.head.hair;
     ctx.beginPath();
-    ctx.moveTo(-14.8, 3.4);
-    ctx.quadraticCurveTo(-17.6, -11.6, -3.8, -17.4);
-    ctx.quadraticCurveTo(10.6, -21.4, 16.0, -6.6);
-    ctx.lineTo(11.0, -10.2);
-    ctx.lineTo(10.2, -4.4);
-    ctx.lineTo(5.8, -9.4);
-    ctx.lineTo(3.2, -2.8);
-    ctx.lineTo(-1.8, -8.8);
-    ctx.lineTo(-5.0, -1.2);
-    ctx.lineTo(-10.0, -6.4);
+    ctx.moveTo(hairShape.start[0], hairShape.start[1]);
+    for (var ai = 0; ai < hairShape.arcs.length; ai++) {
+      var arc = hairShape.arcs[ai];
+      ctx.quadraticCurveTo(arc[0], arc[1], arc[2], arc[3]);
+    }
+    for (var fi = 0; fi < hairShape.fringe.length; fi++) {
+      ctx.lineTo(hairShape.fringe[fi][0], hairShape.fringe[fi][1]);
+    }
     ctx.closePath();
     ctx.fillStyle = hair;
     if (line) { ctx.strokeStyle = line; ctx.lineWidth = 2.4; ctx.stroke(); }
@@ -2797,11 +2832,12 @@
 
     // headband with trailing tails
     ctx.save();
+    var bandShape = SHAPE.head.band;
     ctx.beginPath();
-    ctx.rect(-16, -12.5, 33, 5.4);
+    ctx.rect(bandShape.x, bandShape.y, bandShape.w, bandShape.clip);
     ctx.clip();
     ctx.fillStyle = band;
-    ctx.fillRect(-16, -12.5, 33, 4.2);
+    ctx.fillRect(bandShape.x, bandShape.y, bandShape.w, bandShape.h);
     ctx.restore();
 
     if (!ghost) {
@@ -2873,16 +2909,17 @@
     }
 
     // ---- far side, behind the body -------------------------------------
-    farLimb(farLeg.hip, farLeg.kn, 12.4, 9.2, 1.6, pantsLo, pants, line, ghost);
-    farLimb(farLeg.kn, farLeg.an, 9.4, 6.6, 2.0, pantsLo, pants, line, ghost);
+    var FS = SHAPE.far, NS = SHAPE.near;
+    farLimb(farLeg.hip, farLeg.kn, FS.legHip[0], FS.legHip[1], FS.legHip[2], pantsLo, pants, line, ghost);
+    farLimb(farLeg.kn, farLeg.an, FS.legKn[0], FS.legKn[1], FS.legKn[2], pantsLo, pants, line, ghost);
     shoe(farLeg.an, farLeg.toe, 6.2, bootLo, sole, line, ghost);
-    farLimb(farArm.sh, farArm.el, 9.4, 7.6, 1.2, coatLo, coat, line, ghost);
-    farLimb(farArm.el, farArm.wr, 7.6, 5.8, 1.4, coatLo, coat, line, ghost);
-    handShape(farArm.wr, farArm.ang, 5.0, darken(glove, 0.86), coat, line, ghost);
+    farLimb(farArm.sh, farArm.el, FS.armSh[0], FS.armSh[1], FS.armSh[2], coatLo, coat, line, ghost);
+    farLimb(farArm.el, farArm.wr, FS.armEl[0], FS.armEl[1], FS.armEl[2], coatLo, coat, line, ghost);
+    handShape(farArm.wr, farArm.ang, FS.hand, darken(glove, 0.86), coat, line, ghost);
 
     // ---- near leg and hips, still under the jacket ----------------------
-    limbS(nearLeg.hip, nearLeg.kn, 13.2, 9.6, 1.7, pants, line, ghost);
-    limbS(nearLeg.kn, nearLeg.an, 10.0, 6.8, 2.1, pants, line, ghost);
+    limbS(nearLeg.hip, nearLeg.kn, NS.legHip[0], NS.legHip[1], NS.legHip[2], pants, line, ghost);
+    limbS(nearLeg.kn, nearLeg.an, NS.legKn[0], NS.legKn[1], NS.legKn[2], pants, line, ghost);
     shoe(nearLeg.an, nearLeg.toe, 6.4, boot, sole, line, ghost);
     drawHips(R, pants, line, ghost);
 
@@ -2971,7 +3008,8 @@
     }
 
     // neck
-    capsule(R.neck, [R.neck[0] + R.dir[0] * 7, R.neck[1] + R.dir[1] * 7], 6.2, 6.6, skin, line);
+    capsule(R.neck, [R.neck[0] + R.dir[0] * SHAPE.neck.len, R.neck[1] + R.dir[1] * SHAPE.neck.len],
+            SHAPE.neck.wa, SHAPE.neck.wb, skin, line);
 
     // ---- near side, in front -------------------------------------------
     drawHead(R, pose, ghost, {
@@ -2980,9 +3018,9 @@
       angry: pal.angry, phase: c.phase, wf: wf, away: away
     });
 
-    limbS(nearArm.sh, nearArm.el, 10.0, 8.0, 1.3, coat, line, ghost);
-    limbS(nearArm.el, nearArm.wr, 8.0, 6.0, 1.5, coat, line, ghost);
-    handShape(nearArm.wr, nearArm.ang, 5.4, glove, coat, line, ghost);
+    limbS(nearArm.sh, nearArm.el, NS.armSh[0], NS.armSh[1], NS.armSh[2], coat, line, ghost);
+    limbS(nearArm.el, nearArm.wr, NS.armEl[0], NS.armEl[1], NS.armEl[2], coat, line, ghost);
+    handShape(nearArm.wr, nearArm.ang, NS.hand, glove, coat, line, ghost);
 
     ctx.restore();
   }

@@ -188,7 +188,7 @@ node tools/calib-check.mjs    # judgement and calibration: window, grades, stric
 node tools/beat-check.mjs     # beat analysis on synthetic tracks: tempo, phase, intros, drift, drop, refusals
 node tools/fight-check.mjs    # combat maths and a simulated round: damage, combo cap, difficulty, pacing
 node tools/ver-check.mjs      # APP_VER matches the changelog and the worker's cache really is versioned
-node tools/frame-strip.mjs    # every move, both fighters: neither far arm disappears behind the torso
+node tools/frame-strip.mjs    # every move, both fighters: the far arm keeps a readable lit band, not a sliver
 python3 tools/contrast.py     # WCAG ratios for every ink/surface pair the theme block paints
 ```
 

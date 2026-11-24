@@ -10,6 +10,10 @@
  * the top. It then writes a strip of every move with both fighters so the result
  * can be looked at, not just trusted.
  *
+ * Every dimension it measures with — torso, hips, neck, head and limb widths —
+ * is read from the SHAPE/TORSO table in the game's own rig block, so changing
+ * the body changes the check.
+ *
  *   node tools/frame-strip.mjs [path/to/index.html] [out.svg]
  *
  * Exits non-zero if any sampled pose swallows an arm.
@@ -32,22 +36,12 @@ if (start < 0 || end < start) {
 }
 const block = html.slice(html.indexOf("*/", start) + 2, html.lastIndexOf("/*", end));
 const sandbox = {};
-runInNewContext(block + "\n;({BODY, rig, basePose, idlePose, MOVES, poseAtKeys, lerpPose, blendPose});", sandbox);
-const { BODY, rig, basePose, idlePose, MOVES, poseAtKeys, blendPose } = sandbox;
+runInNewContext(block +
+  "\n;({BODY, TORSO, SHAPE, rig, basePose, idlePose, MOVES, poseAtKeys, lerpPose, blendPose});",
+  sandbox);
+const { TORSO, SHAPE, rig, idlePose, MOVES, poseAtKeys, blendPose } = sandbox;
 
 /* ---- the silhouette the far arm has to survive --------------------------- */
-
-// Copied from the page: the torso every torso pass shares. Kept here rather
-// than extracted because the shape is built with canvas calls; the constants
-// are the part that can drift, so they are asserted against the page below.
-const TORSO = { hip: 14.6, waist: 11.8, chest: 17.4, sh: 19.5, H: BODY.torso + 6 };
-for (const [k, v] of Object.entries(TORSO)) {
-  const m = html.match(new RegExp(`var TORSO = \\{[^}]*\\b${k}:\\s*([\\d.]+)`));
-  if (m && Math.abs(parseFloat(m[1]) - v) > 1e-9) {
-    console.error(`TORSO.${k} is ${m[1]} in the page but ${v} here — update the check`);
-    process.exit(1);
-  }
-}
 
 function torsoPoly(R) {
   const p = R.pelvis, d = R.dir, q = R.perp, H = TORSO.H;
@@ -97,60 +91,138 @@ function inCapsule(x, y, a, b, wa, wb, bulge, pad = 0) {
   return (x - (a[0] + dx * t)) ** 2 + (y - (a[1] + dy * t)) ** 2 <= r * r;
 }
 
-// The head, as it covers the far arm: skull, hair and headband, in the same
-// rotated frame drawHead() builds.
-const HAIR = [
-  [-14.8, 3.4], [-10.0, -6.4], [-5.0, -1.2], [-1.8, -8.8], [3.2, -2.8],
-  [5.8, -9.4], [10.2, -4.4], [11.0, -10.2], [16.0, -6.6], [10.6, -21.4],
-  [-3.8, -17.4], [-17.6, -11.6],
-];
+// A drawn path, as a polygon plus the reach of its outline. Points are tested
+// against the polygon and against the stroke band around its edge, so a shape
+// covers exactly what the canvas would cover.
+function pathTest(poly, outline) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of poly) {
+    x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]);
+    y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+  }
+  const pad = outline / 2;
+  return (x, y) => {
+    if (x < x0 - pad || x > x1 + pad || y < y0 - pad || y > y1 + pad) return false;
+    if (inPoly(x, y, poly)) return true;
+    if (pad <= 0) return false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const ax = poly[j][0], ay = poly[j][1], bx = poly[i][0], by = poly[i][1];
+      const dx = bx - ax, dy = by - ay;
+      const L2 = dx * dx + dy * dy || 1;
+      let t = ((x - ax) * dx + (y - ay) * dy) / L2;
+      t = Math.max(0, Math.min(1, t));
+      if ((x - (ax + dx * t)) ** 2 + (y - (ay + dy * t)) ** 2 <= pad * pad) return true;
+    }
+    return false;
+  };
+}
 
-function occluders(pose, R, near) {
-  const shape = [];
-  const poly = torsoPoly(R);
-  shape.push((x, y) => inPoly(x, y, poly));
+const cubicTo = (p0, c, n = 8) => {
+  const pts = [];
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    pts.push([
+      u * u * u * p0[0] + 3 * u * u * t * c[0] + 3 * u * t * t * c[2] + t * t * t * c[4],
+      u * u * u * p0[1] + 3 * u * u * t * c[1] + 3 * u * t * t * c[3] + t * t * t * c[5],
+    ]);
+  }
+  return pts;
+};
 
-  // hips: the rounded mass the thighs grow out of
+const quadTo = (p0, c, n = 8) => {
+  const pts = [];
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    pts.push([
+      u * u * p0[0] + 2 * u * t * c[0] + t * t * c[2],
+      u * u * p0[1] + 2 * u * t * c[1] + t * t * c[3],
+    ]);
+  }
+  return pts;
+};
+
+/* The head, as drawHead() lays it out: skull, hair and headband in the head's
+ * own rotated frame, scaled by the same turn-dependent amount the page uses. */
+function headOccluders(pose, R, depth) {
+  const H = SHAPE.head;
+  const wf = 0.62 + 0.38 * depth;
+  const kx = Math.min(1.2, 0.9 / wf);
+  const sx = H.scale * kx, sy = H.scale;
+  const tilt = ((pose.headT || 0) + (pose.lean || 0) * 0.2) * Math.PI / 180;
+  const ct = Math.cos(tilt), st = Math.sin(tilt);
+  const toWorld = (x, y) => {
+    const lx = x * sx, ly = y * sy;
+    return [R.head[0] + lx * ct - ly * st, R.head[1] + lx * st + ly * ct];
+  };
+
+  // skull: the cubic path the page fills and strokes
+  let p0 = H.skull[0];
+  const skull = [];
+  for (let i = 1; i < H.skull.length; i++) {
+    const seg = H.skull[i];
+    skull.push(...cubicTo(p0, seg));
+    p0 = [seg[4], seg[5]];
+  }
+
+  // hair: two quadratic sweeps and the spiky fringe
+  const hair = [];
+  let q = H.hair.start;
+  for (const arc of H.hair.arcs) {
+    hair.push(...quadTo(q, arc));
+    q = [arc[2], arc[3]];
+  }
+  hair.push(...H.hair.fringe);
+
+  const b = H.band;
+  const band = [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]];
+
+  return [
+    pathTest(skull.map((p) => toWorld(p[0], p[1])), 3),
+    pathTest(hair.map((p) => toWorld(p[0], p[1])), 2.4),
+    pathTest(band.map((p) => toWorld(p[0], p[1])), 0),
+  ];
+}
+
+function occluders(pose, R, near, depth) {
+  const L = SHAPE.outline;
+  const shape = [(x, y) => inPoly(x, y, torsoPoly(R))];
+
+  // hips: the rounded mass the thighs grow out of, drawn at the pelvis + drop
+  const hips = SHAPE.hips;
   const ang = Math.atan2(R.neck[1] - R.pelvis[1], R.neck[0] - R.pelvis[0]) - Math.PI / 2;
   const ca = Math.cos(ang), sa = Math.sin(ang);
-  const hx = R.pelvis[0], hy = R.pelvis[1] + 2;
+  const hx = R.pelvis[0], hy = R.pelvis[1] + hips.drop;
+  const halfW = hips.w / 2 + 1.5, halfH = hips.h / 2 + 1.5;
   shape.push((x, y) => {
     const dx = x - hx, dy = y - hy;
-    return Math.abs(dx * ca + dy * sa) <= 16.2 && Math.abs(-dx * sa + dy * ca) <= 11.7;
+    return Math.abs(dx * ca + dy * sa) <= halfW && Math.abs(-dx * sa + dy * ca) <= halfH;
   });
 
   // neck capsule
+  const N = SHAPE.neck;
   shape.push((x, y) => inCapsule(x, y, R.neck,
-    [R.neck[0] + R.dir[0] * 7, R.neck[1] + R.dir[1] * 7], 6.2, 6.6, 0, 1.7));
+    [R.neck[0] + R.dir[0] * N.len, R.neck[1] + R.dir[1] * N.len], N.wa, N.wb, 0, L));
 
-  // head: skull ellipse, hair mass, headband
-  const h = R.head;
-  const tilt = ((pose.headT || 0) + (pose.lean || 0) * 0.2) * Math.PI / 180;
-  const ct = Math.cos(tilt), st = Math.sin(tilt);
-  shape.push((x, y) => {
-    const dx = x - h[0], dy = y - h[1];
-    const lx = dx * ct + dy * st, ly = -dx * st + dy * ct;
-    if ((lx / 17.5) ** 2 + ((ly + 1) / 19.5) ** 2 <= 1) return true;
-    if (lx >= -17 && lx <= 17.5 && ly >= -13.5 && ly <= -6.8) return true;
-    return inPoly(lx, ly, HAIR);
-  });
+  shape.push(...headOccluders(pose, R, depth));
 
   // the near side is drawn after the far arm, so it covers it too
-  shape.push((x, y) => inCapsule(x, y, near.leg.hip, near.leg.kn, 13.2, 9.6, 1.7, 1.9));
-  shape.push((x, y) => inCapsule(x, y, near.leg.kn, near.leg.an, 10.0, 6.8, 2.1, 1.9));
-  shape.push((x, y) => inCapsule(x, y, near.arm.sh, near.arm.el, 10.0, 8.0, 1.3, 1.9));
-  shape.push((x, y) => inCapsule(x, y, near.arm.el, near.arm.wr, 8.0, 6.0, 1.5, 1.9));
+  const NS = SHAPE.near;
+  shape.push((x, y) => inCapsule(x, y, near.leg.hip, near.leg.kn, NS.legHip[0], NS.legHip[1], NS.legHip[2], L));
+  shape.push((x, y) => inCapsule(x, y, near.leg.kn, near.leg.an, NS.legKn[0], NS.legKn[1], NS.legKn[2], L));
+  shape.push((x, y) => inCapsule(x, y, near.arm.sh, near.arm.el, NS.armSh[0], NS.armSh[1], NS.armSh[2], L));
+  shape.push((x, y) => inCapsule(x, y, near.arm.el, near.arm.wr, NS.armEl[0], NS.armEl[1], NS.armEl[2], L));
   const hr = near.arm.ang * Math.PI / 180;
   shape.push((x, y) => inCapsule(x, y, near.arm.wr,
-    [near.arm.wr[0] + Math.sin(hr) * 11, near.arm.wr[1] + Math.cos(hr) * 11], 4.0, 5.4, 0, 1.9));
+    [near.arm.wr[0] + Math.sin(hr) * NS.hand * 2.2, near.arm.wr[1] + Math.cos(hr) * NS.hand * 2.2],
+    NS.hand * 0.74, NS.hand, 0, L));
   return shape;
 }
 
 /* ---- the measurement ----------------------------------------------------- */
 
-// Widest unoccluded slice across the far arm, and how much of it is left. A
-// limb that reads is one with a slice wider than the dark outline it carries
-// (1.9 px each side) plus the rim (3.6), so ~2.5 px of actual colour.
+// Widest unoccluded slice across the far arm, and how much of it is left. An
+// arm that reads has a lit band clear of the torso, well past the limb's own
+// dark outline (outline px each side) and its rim — see MIN_SLICE.
 function armVisibility(pose) {
   const cs = Math.cos(((pose.spin || 0) * Math.PI) / 180);
   const depth = Math.abs(cs);
@@ -158,10 +230,11 @@ function armVisibility(pose) {
   const R = rig(pose, depth);
   const far = flip ? R.armF : R.armB;
   const near = flip ? { arm: R.armB, leg: R.legB } : { arm: R.armF, leg: R.legF };
-  const occ = occluders(pose, R, near);
+  const occ = occluders(pose, R, near, depth);
+  const F = SHAPE.far;
   const bones = [
-    [far.sh, far.el, 9.4, 7.6, 1.2],
-    [far.el, far.wr, 7.6, 5.8, 1.4],
+    [far.sh, far.el, F.armSh[0], F.armSh[1], F.armSh[2]],
+    [far.el, far.wr, F.armEl[0], F.armEl[1], F.armEl[2]],
   ];
 
   const hiddenAt = (x, y) => {
@@ -178,30 +251,32 @@ function armVisibility(pose) {
     for (let i = 0; i <= 24; i++) {
       const t = i / 24;
       const cx = a[0] + dx * t, cy = a[1] + dy * t;
-      const r = wAt(wa, wb, bulge, t) + 3.6;   // outermost: rim light edge
+      const r = wAt(wa, wb, bulge, t) + SHAPE.rim;   // outermost: rim light edge
       let run = 0, runMax = 0;
       for (let o = -r; o <= r; o += 0.5) {
-        if (hiddenAt(cx + nx * o, cy + ny * o)) run = 0;
-        else runMax = Math.max(runMax, (run += 0.5));
+        if (hiddenAt(cx + nx * o, cy + ny * o)) {
+          run = 0;
+        } else {
+          run += 0.5;
+          runMax = Math.max(runMax, run);
+          area += 0.5 * (L / 24);
+        }
       }
       bestSlice = Math.max(bestSlice, runMax);
-      // area, coarse but monotone: count the strip between -r and +r
-      for (let o = -r; o <= r; o += 1) {
-        if (!hiddenAt(cx + nx * o, cy + ny * o)) area += 1 * (L / 24);
-      }
     }
   }
-  return { slice: bestSlice, area, R, far };
+  return { slice: bestSlice, area };
 }
 
 /* ---- sample the game's actual poses -------------------------------------- */
 
 const STEPS = 40;      // through the move
 const PHASES = 16;     // the groove runs on its own clock, so sweep it
-const MIN_SLICE = 2.5;
-const MIN_AREA = 40;
+// A readable arm is one with a lit band of real width, not the 3 px sliver a
+// buried limb leaves behind its own outline and rim.
+const MIN_SLICE = 7;
+const MIN_AREA = 160;
 let failed = 0;
-const report = [];
 
 function withSpin(pose, spin) {
   pose.spin = spin;
@@ -229,7 +304,6 @@ for (const name of Object.keys(MOVES)) {
   }
   const bad = worst.slice < MIN_SLICE || worst.area < MIN_AREA;
   if (bad) failed++;
-  report.push({ name, ...worst, bad });
   console.log(`${bad ? "FAIL" : "PASS"} ${name.padEnd(6)} worst at move ${worst.prog.toFixed(2)}, ` +
     `groove ${worst.phase.toFixed(2)}, dir ${worst.dir}: visible slice ` +
     `${worst.slice.toFixed(2)}px, area ${worst.area.toFixed(0)}px²`);
@@ -237,7 +311,7 @@ for (const name of Object.keys(MOVES)) {
 
 // The groove alone is reachable between moves and during a shuffle.
 (function () {
-  let worst = { slice: 1e9, area: 1e9, ph: 0 };
+  let worst = { slice: 1e9, area: 1e9, ph: 0, dir: 0 };
   for (let i = 0; i < 180; i++) {
     const ph = i / 180;
     for (const dir of [-1, 0, 1]) {
@@ -252,7 +326,8 @@ for (const name of Object.keys(MOVES)) {
     `dir ${worst.dir}: visible slice ${worst.slice.toFixed(2)}px, area ${worst.area.toFixed(0)}px²`);
 })();
 
-console.log(`\n${failed === 0 ? "every sampled pose keeps both arms visible" : failed + " pose groups swallow an arm"}`);
+console.log(`\nneed a lit band of ${MIN_SLICE}px and ${MIN_AREA}px² of far arm on every frame`);
+console.log(failed === 0 ? "every sampled pose keeps both arms visible" : failed + " pose groups swallow an arm");
 
 /* ---- the strip ----------------------------------------------------------- */
 
@@ -266,26 +341,45 @@ const PALS = {
             trim: "#ff2b5c", glove: "#ff2b5c", hair: "#28070f", skin: "#dda578", rim: "#ffdcad" },
 };
 
-function limb(a, b, wa, wb, bulge, fill, pal, rim) {
+function limb(a, b, w, fill, pal, rim) {
   const dx = b[0] - a[0], dy = b[1] - a[1];
   const L = Math.hypot(dx, dy) || 1;
   const ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
   const side = (e) => {
     const top = [], bot = [];
     for (let i = 0; i <= 7; i++) {
-      const t = i / 7, w = wAt(wa, wb, bulge, t) + e;
-      top.push([a[0] + ux * L * t + nx * w, a[1] + uy * L * t + ny * w]);
-      bot.push([a[0] + ux * L * t - nx * w, a[1] + uy * L * t - ny * w]);
+      const t = i / 7, ww = wAt(w[0], w[1], w[2], t) + e;
+      top.push([a[0] + ux * L * t + nx * ww, a[1] + uy * L * t + ny * ww]);
+      bot.push([a[0] + ux * L * t - nx * ww, a[1] + uy * L * t - ny * ww]);
     }
     return `<path d="M${top.map((p) => n(p[0]) + " " + n(p[1])).join("L")}L${bot.reverse().map((p) => n(p[0]) + " " + n(p[1])).join("L")}Z" fill="${fill}"/>` +
-      `<circle cx="${n(a[0])}" cy="${n(a[1])}" r="${n(wa + e)}" fill="${fill}"/>` +
-      `<circle cx="${n(b[0])}" cy="${n(b[1])}" r="${n(wb + e)}" fill="${fill}"/>`;
+      `<circle cx="${n(a[0])}" cy="${n(a[1])}" r="${n(w[0] + e)}" fill="${fill}"/>` +
+      `<circle cx="${n(b[0])}" cy="${n(b[1])}" r="${n(w[1] + e)}" fill="${fill}"/>`;
   };
   let s = "";
-  if (rim) s += side(3.6).replaceAll(`fill="${fill}"`, `fill="${pal.rim}"`);
-  s += side(1.9).replaceAll(`fill="${fill}"`, `fill="#0b0416"`);
+  if (rim) s += side(SHAPE.rim).replaceAll(`fill="${fill}"`, `fill="${pal.rim}"`);
+  s += side(SHAPE.outline).replaceAll(`fill="${fill}"`, `fill="#0b0416"`);
   s += side(0);
   return s;
+}
+
+// the head, drawn from the same skull/hair/band paths the canvas uses
+function headSvg(pose, R, depth, pal, away) {
+  const H = SHAPE.head;
+  const wf = 0.62 + 0.38 * depth;
+  const kx = Math.min(1.2, 0.9 / wf);
+  const tilt = (pose.headT || 0) + (pose.lean || 0) * 0.2;
+  const skull = "M" + H.skull[0].join(" ") + H.skull.slice(1)
+    .map((c) => "C" + c.join(" ")).join("") + "Z";
+  const hair = "M" + H.hair.start.join(" ") + H.hair.arcs
+    .map((a) => "Q" + a.join(" ")).join("") +
+    H.hair.fringe.map((p) => "L" + p.join(" ")).join("") + "Z";
+  const b = H.band;
+  return `<g transform="translate(${n(R.head[0])},${n(R.head[1])}) rotate(${n(tilt)}) ` +
+    `scale(${n(H.scale * kx)},${n(H.scale)})">` +
+    `<path d="${skull}" fill="${away ? pal.hair : pal.skin}" stroke="#0b0416" stroke-width="3"/>` +
+    `<path d="${hair}" fill="${pal.hair}" stroke="#0b0416" stroke-width="2.4"/>` +
+    `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="${pal.trim}"/></g>`;
 }
 
 function figure(pose, facing, pal) {
@@ -298,29 +392,30 @@ function figure(pose, facing, pal) {
   const near = flip ? { arm: R.armB, leg: R.legB } : { arm: R.armF, leg: R.legF };
   const far = flip ? { arm: R.armF, leg: R.legF } : { arm: R.armB, leg: R.legB };
   const away = cs < -0.12;
+  const F = SHAPE.far, NS = SHAPE.near;
   const parts = [];
 
-  parts.push(limb(far.leg.hip, far.leg.kn, 12.4, 9.2, 1.6, pal.pantsLo, pal, pal.rim));
-  parts.push(limb(far.leg.kn, far.leg.an, 9.4, 6.6, 2.0, pal.pantsLo, pal, pal.rim));
-  parts.push(limb(far.arm.sh, far.arm.el, 9.4, 7.6, 1.2, pal.coatLo, pal, pal.rim));
-  parts.push(limb(far.arm.el, far.arm.wr, 7.6, 5.8, 1.4, pal.coatLo, pal, pal.rim));
+  parts.push(limb(far.leg.hip, far.leg.kn, F.legHip, pal.pantsLo, pal, pal.rim));
+  parts.push(limb(far.leg.kn, far.leg.an, F.legKn, pal.pantsLo, pal, pal.rim));
+  parts.push(limb(far.arm.sh, far.arm.el, F.armSh, pal.coatLo, pal, pal.rim));
+  parts.push(limb(far.arm.el, far.arm.wr, F.armEl, pal.coatLo, pal, pal.rim));
 
-  parts.push(limb(near.leg.hip, near.leg.kn, 13.2, 9.6, 1.7, pal.pants, pal, null));
-  parts.push(limb(near.leg.kn, near.leg.an, 10.0, 6.8, 2.1, pal.pants, pal, null));
-  parts.push(`<rect x="${n(R.pelvis[0] - 14.5)}" y="${n(R.pelvis[1] - 8)}" width="29" height="20" rx="7" fill="${pal.pants}" stroke="#0b0416" stroke-width="2.5"/>`);
+  parts.push(limb(near.leg.hip, near.leg.kn, NS.legHip, pal.pants, pal, null));
+  parts.push(limb(near.leg.kn, near.leg.an, NS.legKn, pal.pants, pal, null));
+  const hp = SHAPE.hips;
+  parts.push(`<rect x="${n(R.pelvis[0] + hp.x)}" y="${n(R.pelvis[1] + hp.drop + hp.y)}" ` +
+    `width="${hp.w}" height="${hp.h}" rx="${hp.r}" fill="${pal.pants}" stroke="#0b0416" stroke-width="2.5"/>`);
 
-  const torso = torsoPoly(R);
-  parts.push(`<path d="M${polyPts(torso)}Z" fill="${pal.coat}" stroke="#0b0416" stroke-width="3"/>`);
+  parts.push(`<path d="M${polyPts(torsoPoly(R))}Z" fill="${pal.coat}" stroke="#0b0416" stroke-width="3"/>`);
 
-  // neck
-  parts.push(limb(R.neck, [R.neck[0] + R.dir[0] * 7, R.neck[1] + R.dir[1] * 7], 6.2, 6.6, 0, pal.skin, pal, null));
-  // head
-  parts.push(`<circle cx="${n(R.head[0])}" cy="${n(R.head[1])}" r="15" fill="${away ? pal.hair : pal.skin}" stroke="#0b0416" stroke-width="2.5"/>`);
-  parts.push(`<path d="M${polyPts(HAIR.map(([x, y]) => [R.head[0] + x, R.head[1] + y]))}Z" fill="${pal.hair}"/>`);
+  const N = SHAPE.neck;
+  parts.push(limb(R.neck, [R.neck[0] + R.dir[0] * N.len, R.neck[1] + R.dir[1] * N.len],
+    [N.wa, N.wb, 0], pal.skin, pal, null));
+  parts.push(headSvg(pose, R, depth, pal, away));
 
-  parts.push(limb(near.arm.sh, near.arm.el, 10.0, 8.0, 1.3, pal.coat, pal, null));
-  parts.push(limb(near.arm.el, near.arm.wr, 8.0, 6.0, 1.5, pal.coat, pal, null));
-  parts.push(`<circle cx="${n(near.arm.wr[0])}" cy="${n(near.arm.wr[1])}" r="5" fill="${pal.glove}"/>`);
+  parts.push(limb(near.arm.sh, near.arm.el, NS.armSh, pal.coat, pal, null));
+  parts.push(limb(near.arm.el, near.arm.wr, NS.armEl, pal.coat, pal, null));
+  parts.push(`<circle cx="${n(near.arm.wr[0])}" cy="${n(near.arm.wr[1])}" r="${n(NS.hand - 0.4)}" fill="${pal.glove}"/>`);
 
   return `<g transform="scale(${n(sx * 0.6)},${n(0.6)})">${parts.join("")}</g>`;
 }
