@@ -3,10 +3,10 @@
   "locked": false,
   "files": {
     "README.md": {
-      "sha": "64fcef00a58ffbe06da3726339f1c0a95ef4e9a1",
-      "producer": "buffalo@2026-11-23",
+      "sha": "43233d1fee7c1f2ff39a2fba393de306ca44749b",
+      "producer": "agent",
       "class": "generated",
-      "at": "2026-11-23T10:51:02Z"
+      "at": "2026-11-23T12:55:18Z"
     },
     "docs/index.html": {
       "sha": "34f37e265d7b418d63721d38440038f01d2605f4",
@@ -15,10 +15,10 @@
       "at": "2026-11-14T18:06:20Z"
     },
     "docs/play/index.html": {
-      "sha": "29baa4a31d0b5276cfd820dce8421278913cb4ed",
-      "producer": "buffalo@2026-11-23",
+      "sha": "eab1eb38285153ba4ca7301d1d7b6acc0f41b47f",
+      "producer": "agent",
       "class": "hand",
-      "at": "2026-11-23T10:51:02Z"
+      "at": "2026-11-24T02:14:56Z"
     },
     ".github/workflows/build-apps.yml": {
       "sha": "65d8211f28b9bb0492a0bdc9831c013ab6bc6621",
@@ -27,10 +27,10 @@
       "at": "2026-11-10T15:12:04Z"
     },
     "CHANGELOG.md": {
-      "sha": "287008e7964657360710537eb2be172c9b89603d",
-      "producer": "buffalo@2026-11-23",
+      "sha": "ef4f74a3fd41077883583f351dab42139c94629f",
+      "producer": "agent",
       "class": "agent",
-      "at": "2026-11-23T10:51:02Z"
+      "at": "2026-11-24T02:13:58Z"
     },
     "tools/contrast.py": {
       "sha": "72724051ccdfadd4fd67e28bcb7b9e76bee4d515",
@@ -81,17 +81,29 @@
       "at": "2026-11-23T05:35:26Z"
     },
     "tools/calib-check.mjs": {
-      "sha": "c6d54a03342b84953d9d5a41e08bd722fa679138",
-      "producer": "buffalo@2026-11-23",
+      "sha": "1727946fb366611833991e347b98ca4ca9c2b151",
+      "producer": "agent",
       "class": "agent",
-      "at": "2026-11-23T10:51:02Z"
+      "at": "2026-11-23T12:55:18Z"
     },
     "tools/beat-check.mjs": {
-      "sha": "990de377ecc6c0d664926b6495bc5073463e8239",
-      "producer": "buffalo@2026-11-23",
+      "sha": "9ecb4ad83822bd1b7ee759ebfd5a2ba53396b54b",
+      "producer": "agent",
       "class": "agent",
-      "at": "2026-11-23T10:51:15Z"
+      "at": "2026-11-23T12:55:18Z"
+    },
+    "tools/fight-check.mjs": {
+      "sha": "9567ac04d4966c194225b1b68783118224485695",
+      "producer": "agent",
+      "class": "agent",
+      "at": "2026-11-23T12:55:18Z"
+    },
+    "tools/ver-check.mjs": {
+      "sha": "5f7f14da5f349bfe38944fd50f3d2dfd9b8ea572",
+      "producer": "agent",
+      "class": "agent",
+      "at": "2026-11-23T12:55:18Z"
     }
   },
-  "updated": "2026-11-23T10:51:15Z"
+  "updated": "2026-11-24T02:14:56Z"
 }

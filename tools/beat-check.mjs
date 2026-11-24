@@ -85,7 +85,8 @@ function seeded(seed) {
   return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
 }
 
-function makeBuffer({ bpm = 120, seconds = 8, start = 0.05, intro = 0, sr = 44100, silent = false }) {
+function makeBuffer({ bpm = 120, endBpm = 0, seconds = 8, start = 0.05, intro = 0, sr = 44100,
+                    silent = false, loudFrom = 0 }) {
   const n = Math.floor(seconds * sr);
   const data = new Float32Array(n);
   const period = 60 / bpm;
@@ -93,14 +94,19 @@ function makeBuffer({ bpm = 120, seconds = 8, start = 0.05, intro = 0, sr = 4410
   if (!silent) {
     const rnd = seeded(20261123);
     for (let i = 0; i < n; i++) data[i] = (rnd() - 0.5) * 0.006;
-    for (let t = intro + start; t < seconds - 0.15; t += period) {
+    // A linear tempo ramp is what a build or a live kit actually does to a grid.
+    let t = intro + start;
+    while (t < seconds - 0.15) {
       kicks.push(t);
+      const amp = loudFrom && t >= loudFrom ? 2.4 : 1;
       const from = Math.floor(t * sr);
       const len = Math.floor(0.18 * sr);
       for (let i = 0; i < len && from + i < n; i++) {
         const x = i / sr;
-        data[from + i] += Math.sin(2 * Math.PI * 55 * x) * Math.exp(-x * 18) * 0.9;
+        data[from + i] += Math.sin(2 * Math.PI * 55 * x) * Math.exp(-x * 18) * 0.9 * amp;
       }
+      const local = endBpm ? bpm + (endBpm - bpm) * (t / seconds) : bpm;
+      t += 60 / local;
     }
   }
   return {
@@ -112,6 +118,18 @@ function makeBuffer({ bpm = 120, seconds = 8, start = 0.05, intro = 0, sr = 4410
     kicks,
     period,
   };
+}
+
+/* How far a kick sits from the drift map's mapped grid, in ms. */
+function mapErrMs(q, t) {
+  const lin = (t - q.a) / q.b;
+  const disc = q.b * q.b + 4 * q.c * (t - q.a);
+  if (disc <= 0) return Infinity;
+  const r1 = (-q.b + Math.sqrt(disc)) / (2 * q.c);
+  const r2 = (-q.b - Math.sqrt(disc)) / (2 * q.c);
+  const k = Math.abs(r1 - lin) <= Math.abs(r2 - lin) ? r1 : r2;
+  const local = q.b + 2 * q.c * Math.round(k);
+  return Math.abs(k - Math.round(k)) * local * 1000;
 }
 
 /* How far a returned grid phase sits from a known beat, in milliseconds, with
@@ -179,6 +197,40 @@ for (const bpm of [100, 120, 150]) {
   const b = await run(opts);
   ok("analysis is deterministic", JSON.stringify(a) === JSON.stringify(b),
      JSON.stringify(a) + " vs " + JSON.stringify(b));
+}
+
+/* ---- 7. a drifting track gets a tempo map, and a steady one does not ------
+   A single affine grid is exact for a machine-quantised track and half a beat
+   out by the end of one that ramps. The map is only adopted when the drift is
+   real and consistent: noise must never replace the grid the other checks trust. */
+{
+  const ramp = makeBuffer({ bpm: 120, endBpm: 132, seconds: 60, start: 0.05 });
+  const r = await analyze(ramp, () => {});
+  ok("a 120->132 BPM ramp is given a tempo map", !!r && !!r.q, r ? "q " + (r.q ? "yes" : "none") : "no grid");
+  const worst = r && r.q ? Math.max(...ramp.kicks.map((t) => mapErrMs(r.q, t))) : Infinity;
+  ok("every kick in the ramp sits within one hop of the mapped grid", worst < 25,
+     isFinite(worst) ? worst.toFixed(1) + " ms worst" : "no map");
+  // A ramp is exact at both ends under one average grid and wrong in the middle:
+  // that mid-track error is the reason the map exists.
+  const mid = ramp.kicks.find((t) => t >= 30) || ramp.kicks[0];
+  const single = r ? gridErrMs(r.phase, mid, r.period) : Infinity;
+  ok("the map is doing work (one grid would be out mid-track)", single > 40,
+     isFinite(single) ? single.toFixed(1) + " ms out at 30 s" : "no grid");
+
+  const steady = await analyze(makeBuffer({ bpm: 120, seconds: 45 }), () => {});
+  ok("a steady track keeps the single grid (no false drift)", !!steady && !steady.q,
+     steady ? "q " + (steady.q ? "present" : "none") : "no grid");
+}
+
+/* ---- 8. the drop is found, and a track that never lifts has none --------- */
+{
+  const lifting = await analyze(makeBuffer({ bpm: 120, seconds: 40, loudFrom: 20 }), () => {});
+  ok("the loud section is reported as the drop",
+     !!lifting && lifting.drop >= 19 && lifting.drop <= 23.5,
+     lifting ? "drop " + lifting.drop : "no grid");
+  const flat = await analyze(makeBuffer({ bpm: 120, seconds: 30 }), () => {});
+  ok("a track with no lift reports no drop", !!flat && flat.drop === 0,
+     flat ? "drop " + flat.drop : "no grid");
 }
 
 summary();

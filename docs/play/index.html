@@ -177,6 +177,49 @@
   @media (orientation:portrait) { #hint { display:none; } }
   html.reduce .bar > i { transition:none; }
 
+  /* ---- timing report, pause sheet, rehearsal, safe areas ---- */
+  .timing { margin-top:1.2rem; }
+  .timing .tk { font-size:0.7rem; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.5); }
+  #histo { display:flex; align-items:flex-end; gap:2px; height:58px; margin-top:0.5rem;
+    border-bottom:1px solid rgba(255,255,255,0.18); }
+  #histo i { flex:1 1 0; min-height:2px; background:linear-gradient(180deg,#37e6ff,#ff4fd8); opacity:0.82; border-radius:1px 1px 0 0; }
+  #histo i.near { background:#ffd23f; opacity:1; }
+  #timingNote { margin-top:0.45rem; font-size:0.8rem; color:rgba(255,255,255,0.72); line-height:1.5; }
+  #timingNote b { color:#ffd23f; }
+  .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  #pauseSheet { position:fixed; inset:0; z-index:26; display:none; align-items:center; justify-content:center;
+    background:rgba(4,0,12,0.84); }
+  #pauseSheet.on { display:flex; }
+  #pauseSheet .box { width:min(480px,88vw); padding:1.6rem; border-radius:16px;
+    border:1px solid rgba(255,79,216,0.4); background:linear-gradient(160deg,rgba(30,6,54,0.96),rgba(8,2,20,0.98));
+    text-align:center; }
+  #pauseSheet h3 { font-size:1.05rem; letter-spacing:0.24em; text-transform:uppercase; margin-bottom:0.8rem; }
+  #pauseSheet .row { display:flex; align-items:center; gap:0.7rem; justify-content:center; margin-top:0.9rem;
+    flex-wrap:wrap; font-size:0.8rem; }
+  #pauseRange { -webkit-appearance:none; appearance:none; width:11em; height:0.3em; border-radius:1em;
+    background:rgba(255,255,255,0.18); outline:none; }
+  #pauseRange::-webkit-slider-thumb { -webkit-appearance:none; width:1em; height:1em; border-radius:50%;
+    background:#ff4fd8; box-shadow:0 0 0.6em #ff4fd8; cursor:pointer; }
+  #pauseRange::-moz-range-thumb { width:1em; height:1em; border:0; border-radius:50%; background:#ff4fd8; cursor:pointer; }
+  #practiceHud { position:absolute; left:50%; transform:translateX(-50%); bottom:5.2em; z-index:14; display:none;
+    padding:0.45em 1em; border-radius:2em; background:rgba(10,2,25,0.72); border:1px solid rgba(255,210,63,0.5);
+    font-size:0.78em; letter-spacing:0.06em; color:#ffe9a8; white-space:nowrap; }
+  #practiceHud.on { display:block; }
+  body.paused #touch { display:none; }
+  #tune .keys { display:flex; gap:0.3rem; flex-wrap:wrap; }
+  #tune .keys button { background:rgba(255,255,255,0.08) !important; color:#fff !important; border:1px solid rgba(255,255,255,0.22) !important;
+    border-radius:8px !important; padding:0.22em 0.5em; font-size:0.7rem; letter-spacing:0.04em; cursor:pointer; font-family:inherit; }
+  #tune .keys button.arm { background:rgba(255,79,216,0.85) !important; color:#1a0512 !important; }
+  #moveName.great { color:#63f7ff; text-shadow:0 0 0.7em rgba(99,247,255,0.9); }
+  #moveName.great::after { content:" · CLOSE"; font-size:0.7em; letter-spacing:0.2em; }
+  /* Notches and home bars sit on top of a full-screen stage: keep the HUD and
+     the thumb buttons inside the safe area instead of under the hardware. */
+  .hudtop { top:calc(1.1em + env(safe-area-inset-top, 0px));
+            left:calc(1.4em + env(safe-area-inset-left, 0px)); right:calc(1.4em + env(safe-area-inset-right, 0px)); }
+  .hudbot { bottom:calc(1.0em + env(safe-area-inset-bottom, 0px)); }
+  #muteBtn { bottom:calc(1.0em + env(safe-area-inset-bottom, 0px)); right:calc(1.4em + env(safe-area-inset-right, 0px)); }
+  #relockBtn { bottom:calc(3.5em + env(safe-area-inset-bottom, 0px)); right:calc(1.4em + env(safe-area-inset-right, 0px)); }
+
   /* ---- landscape nudge ---- */
   #rotateHint { position:fixed; left:50%; transform:translateX(-50%); z-index:30; display:none;
     top:calc(0.8rem + env(safe-area-inset-top, 0px)); padding:0.5rem 1.1rem; border-radius:1rem;
@@ -211,6 +254,8 @@
     </div>
     <div id="combo"></div>
     <div id="moveName"></div>
+    <div id="practiceHud">PRACTICE</div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
     <div id="soundWarn"><b>No sound coming through.</b><br/>Tap here to enable audio.</div>
     <div class="hudbot">
       <div id="hint"><b>A/D</b> shuffle &nbsp;·&nbsp; <b>W</b> leap &nbsp;·&nbsp; <b>S</b> dip-guard &nbsp;·&nbsp;
@@ -224,16 +269,16 @@
 <!-- on-screen controls for touch devices -->
 <div id="touch">
   <div class="pad movepad">
-    <button class="tbtn" data-k="w" aria-label="leap">▲</button>
-    <button class="tbtn" data-k="a" aria-label="shuffle left">◀</button>
-    <button class="tbtn" data-k="s" aria-label="dip guard">▼</button>
-    <button class="tbtn" data-k="d" aria-label="shuffle right">▶</button>
+    <button class="tbtn" data-a="up" aria-label="leap">▲</button>
+    <button class="tbtn" data-a="left" aria-label="shuffle left">◀</button>
+    <button class="tbtn" data-a="down" aria-label="dip guard">▼</button>
+    <button class="tbtn" data-a="right" aria-label="shuffle right">▶</button>
   </div>
   <div class="pad atkpad">
-    <button class="tbtn atk" data-k="j">JAB</button>
-    <button class="tbtn atk" data-k="k">KICK</button>
-    <button class="tbtn atk" data-k="l">UPPER</button>
-    <button class="tbtn fin" data-k=" ">FINISH</button>
+    <button class="tbtn atk" data-a="jab">JAB</button>
+    <button class="tbtn atk" data-a="kick">KICK</button>
+    <button class="tbtn atk" data-a="upper">UPPER</button>
+    <button class="tbtn fin" data-a="fin">FINISH</button>
   </div>
 </div>
 <div id="rotateHint">↻ Landscape gives you the whole arena — portrait now frames the fight too</div>
@@ -265,7 +310,7 @@
       <div class="ctrl"><kbd>K</kbd><span class="mv">Spinning Kick — medium</span></div>
       <div class="ctrl"><kbd>L</kbd><span class="mv">Body-Roll Uppercut — heavy</span></div>
       <div class="ctrl"><kbd>SPACE</kbd><span class="mv">Body-Roll Finisher — meter</span></div>
-      <div class="ctrl"><kbd>P</kbd><span>pause / resume music</span></div>
+      <div class="ctrl"><kbd>P</kbd><span>pause / resume the round</span></div>
     </div>
 
     <div id="tune">
@@ -295,6 +340,46 @@
         <button type="button" class="mini" id="cueBtn">Off</button>
         <span id="synthState2" style="font-size:0.72rem;color:rgba(255,255,255,0.5)">a pulse along the top of the screen on every beat — for muted play</span>
       </div>
+      <div class="opt">
+        <span class="k">Timing</span>
+        <span class="seg" id="judgeSeg">
+          <button type="button" data-j="normal">Normal</button><button type="button" data-j="strict">Strict</button>
+        </span>
+        <span style="font-size:0.72rem;color:rgba(255,255,255,0.5)">strict halves the window — for rhythm veterans</span>
+      </div>
+      <div class="opt">
+        <span class="k">Tempo</span>
+        <button type="button" class="mini" id="halfBtn">÷2</button>
+        <button type="button" class="mini" id="doubleBtn">×2</button>
+        <span style="font-size:0.72rem;color:rgba(255,255,255,0.5)">if the grid locked to half or double time</span>
+      </div>
+      <div class="opt">
+        <span class="k">Rehearse</span>
+        <select id="loopBars" aria-label="Loop length in bars">
+          <option value="4" selected>4 bars</option><option value="8">8 bars</option>
+        </select>
+        <span class="seg" id="rateSeg">
+          <button type="button" data-r="1">1×</button><button type="button" data-r="0.75">0.75×</button><button type="button" data-r="0.5">0.5×</button>
+        </span>
+        <button type="button" class="mini" id="rehearseBtn">Loop it</button>
+      </div>
+      <div class="opt" id="lastRow" style="display:none">
+        <span class="k">Last track</span>
+        <button type="button" class="mini" id="lastBtn">Reload</button>
+        <span id="lastNote" style="font-size:0.72rem;color:rgba(255,255,255,0.5)"></span>
+      </div>
+      <div class="opt">
+        <span class="k">Flashes</span>
+        <span class="seg" id="flashSeg">
+          <button type="button" data-f="full">Full</button><button type="button" data-f="safe">Limited</button>
+        </span>
+        <span style="font-size:0.72rem;color:rgba(255,255,255,0.5)">limit strobes — photosensitivity</span>
+      </div>
+      <div class="opt">
+        <span class="k">Keys</span>
+        <span class="keys" id="keyMap"></span>
+        <span id="keyArm" style="font-size:0.72rem;color:rgba(255,255,255,0.5)">tap a key, then press its replacement</span>
+      </div>
     </div>
 
     <div class="btnrow">
@@ -303,6 +388,23 @@
     </div>
     <div id="bestRow"></div>
     <div class="note">Your track is analysed before the fight, so the dance is locked to its actual beat grid. If a song has no clear pulse, the arena falls back to a steady 128 BPM groove.</div>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<div id="pauseSheet">
+  <div class="box">
+    <h3>Paused</h3>
+    <div class="row">
+      <span>Beat offset</span>
+      <input type="range" id="pauseRange" min="-200" max="200" step="5" value="0" aria-label="Beat offset in milliseconds" />
+      <span id="pauseVal">0 ms</span>
+    </div>
+    <div class="row">
+      <button type="button" class="mini" id="resumeBtn">Resume</button>
+      <button type="button" class="mini" id="quitBtn">Back to setup</button>
+    </div>
+    <div class="row" style="font-size:0.72rem;opacity:0.6">P pauses · Esc leaves practice · the offset applies live</div>
   </div>
 </div>
 
@@ -315,6 +417,14 @@
       <div><div class="k">Score</div><div class="v" id="sScore">0</div></div>
       <div><div class="k">Best combo</div><div class="v" id="sCombo">0</div></div>
       <div><div class="k">Perfect hits</div><div class="v" id="sPerfect">0</div></div>
+    </div>
+    <div class="timing" id="timingReport">
+      <div class="tk">Timing — where your hits landed</div>
+      <div id="histo"></div>
+      <div id="timingNote">No landed hits to measure.</div>
+      <div class="btnrow" style="margin-top:0.8rem">
+        <button type="button" class="mini" id="nudgeBtn" style="display:none">Apply the median</button>
+      </div>
     </div>
     <div id="bestNote"></div>
     <div class="btnrow">
@@ -385,6 +495,16 @@
   var introSkip = 0;        // seconds of beatless lead-in at the head of the loaded track
   var lastBeatIdx = -9999;
   var loadingTrack = false, pendingPlay = false;
+  // Playback shaping: 1x normally, slower and looping in rehearsal. playRate is
+  // in buffer seconds per real second, so judgement and the dance both have to
+  // follow it or slowing a track down would change the game's difficulty.
+  var playRate = 1, loopOn = false, loopFrom = 0, loopTo = 0;
+  // The audio clock is the authority for time. Writing down where it was at a
+  // known performance.now() is what lets a keypress be judged at the instant it
+  // happened instead of at the next animation frame.
+  var clockRef = { perf: 0, audio: 0 };
+  var currentTrackKey = "", dropAt = 0, dropFired = false, rivalSurgeUntil = 0;
+  var paused = false;
 
   var beat = {
     last: -99,          // seconds (song clock) of last detected onset
@@ -402,7 +522,12 @@
      SETTINGS & PERSONAL BESTS — small, local, no account
      ============================================================ */
   var SET_KEY = "dance-fight:settings:v1", BEST_KEY = "dance-fight:best:v1";
-  var settings = { offsetMs: 0, difficulty: "normal", cue: false, bpm: 128 };
+  var TRACKS_KEY = "dance-fight:tracks:v1", LAST_KEY = "dance-fight:last:v1";
+  // The key map is remappable: J/K/L is fine on a US board and nonsense on AZERTY,
+  // and a player with one hand needs a layout that is not this one.
+  var DEFAULT_MAP = { left: "a", right: "d", up: "w", down: "s", jab: "j", kick: "k", upper: "l", fin: " " };
+  var settings = { offsetMs: 0, difficulty: "normal", cue: false, bpm: 128,
+                   judge: "normal", flash: "full", haptics: true, map: null };
   // Difficulty changes the rival only: how often it commits, how fast it walks,
   // how well it guards, and how hard it hits. The player's damage and the beat
   // scoring are identical on every setting, so a PERFECT is always a PERFECT.
@@ -429,6 +554,15 @@
   try { storeFresh = !localStorage.getItem(SET_KEY); } catch (e) {}
   readStore(SET_KEY, settings);
   readStore(BEST_KEY, best);
+  settings.map = settings.map && typeof settings.map === "object" ? settings.map : {};
+  for (var mk in DEFAULT_MAP) {
+    if (typeof settings.map[mk] !== "string" || !settings.map[mk]) settings.map[mk] = DEFAULT_MAP[mk];
+  }
+  function readJSON(k, fallback) {
+    try { var raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; } catch (e) { return fallback; }
+  }
+  var trackCache = readJSON(TRACKS_KEY, null) || {};
+  var lastTrack = readJSON(LAST_KEY, null);
 
   var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   if (reduceMotion) document.documentElement.classList.add("reduce");
@@ -547,29 +681,123 @@
     return n ? Math.sqrt(sum / n) : 0;
   }
 
+  /* ---- remembering a track ------------------------------------------------
+     Analysis is the slow part, so its result is keyed by the file's name+size and
+     kept, with the file itself in IndexedDB. Re-loading a song then skips the
+     analysis entirely, and the start screen can offer the last one back with one
+     tap. Best scores are kept per track too: a song is a level. */
+  function trackKeyOf(file) { return (file.name || "track") + "|" + (file.size || 0); }
+
+  var idbProm = null;
+  function idb() {
+    if (idbProm) return idbProm;
+    idbProm = new Promise(function (resolve) {
+      if (!window.indexedDB) { resolve(null); return; }
+      var req;
+      try { req = indexedDB.open("dance-fight", 1); } catch (e) { resolve(null); return; }
+      req.onupgradeneeded = function () { try { req.result.createObjectStore("tracks"); } catch (e) {} };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { resolve(null); };
+    });
+    return idbProm;
+  }
+  function idbPut(key, value) {
+    return idb().then(function (db) {
+      if (!db) return false;
+      return new Promise(function (resolve) {
+        try {
+          var tx = db.transaction("tracks", "readwrite");
+          tx.objectStore("tracks").put(value, key);
+          tx.oncomplete = function () { resolve(true); };
+          tx.onerror = function () { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    });
+  }
+  function idbGet(key) {
+    return idb().then(function (db) {
+      if (!db) return null;
+      return new Promise(function (resolve) {
+        try {
+          var req = db.transaction("tracks", "readonly").objectStore("tracks").get(key);
+          req.onsuccess = function () { resolve(req.result || null); };
+          req.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+  function idbDel(key) {
+    return idb().then(function (db) {
+      if (!db) return false;
+      try { db.transaction("tracks", "readwrite").objectStore("tracks").delete(key); return true; } catch (e) { return false; }
+    });
+  }
+
+  var TRACK_KEEP = 6;   // the grid is cheap to keep, the file is not
+  // Least-recently-used eviction, in one place so a best score cannot quietly
+  // push the cache past its cap.
+  function pruneTracks() {
+    var keys = Object.keys(trackCache);
+    if (keys.length <= TRACK_KEEP) return;
+    keys.sort(function (a, b) { return (trackCache[a].savedAt || 0) - (trackCache[b].savedAt || 0); });
+    while (keys.length > TRACK_KEEP) {
+      var dead = keys.shift();
+      delete trackCache[dead];
+      idbDel(dead);
+    }
+  }
+  function cacheTrack(key, grid, raw) {
+    var e = trackCache[key] || {};
+    e.bpm = grid.bpm; e.period = grid.period; e.phase = grid.phase;
+    e.intro = grid.intro || 0; e.drop = grid.drop || 0;
+    e.savedAt = Date.now();
+    trackCache[key] = e;
+    pruneTracks();
+    saveStore(TRACKS_KEY, trackCache);
+    if (raw) idbPut(key, raw);
+  }
+  function saveTrackBest(key, b) {
+    if (!key) return;
+    var e = trackCache[key] || {};
+    e.best = b;
+    e.savedAt = Date.now();      // a track you came back to is not the next to go
+    trackCache[key] = e;
+    pruneTracks();
+    saveStore(TRACKS_KEY, trackCache);
+  }
+
   function loadTrack(file) {
     var c = ensureCtx();
     loadingTrack = true;
+    currentTrackKey = trackKeyOf(file);
+    var cached = trackCache[currentTrackKey];
     setTrackMsg("Reading \"" + file.name + "\"\u2026", "");
     var reader = new FileReader();
-    reader.onerror = function () { setTrackMsg("Could not read that file.", "err"); };
+    reader.onerror = function () { setTrackMsg("Could not read that file.", "err"); loadingTrack = false; };
     reader.onload = function (e) {
-      if (!c) { setTrackMsg("This browser has no Web Audio support.", "err"); return; }
-      decodeAudio(c, e.target.result).then(function (buf) {
+      if (!c) { setTrackMsg("This browser has no Web Audio support.", "err"); loadingTrack = false; return; }
+      var raw = e.target.result;
+      decodeAudio(c, raw.slice(0)).then(function (buf) {
         audioBuf = buf;
         trackName = file.name;
         setTrackMsg("Analysing the beat of \"" + file.name + "\"\u2026", "");
         beatGrid = null;
         introSkip = 0;
+        dropAt = 0; dropFired = false;
         stopSynth();
-        return analyzeBuffer(buf, setAnalysisProgress.bind(null, true)).then(function (grid) {
+        function adopt(grid, fromCache) {
           beatGrid = grid;
           beatGridSynthetic = false;
           introSkip = (grid && grid.intro) || 0;
+          dropAt = (grid && grid.drop) || 0;
+          dropFired = false;
           setAnalysisProgress(false, 1);
+          var tb = trackCache[currentTrackKey];
           setTrackMsg("Loaded: " + file.name +
-            (grid ? ("  \u00b7  locked at " + grid.bpm + " BPM") : "  \u00b7  no clear pulse \u2014 default groove") +
+            (grid ? ("  \u00b7  locked at " + grid.bpm + " BPM" + (fromCache ? " (remembered)" : "")) : "  \u00b7  no clear pulse \u2014 default groove") +
             (introSkip ? ("  \u00b7  first beat at " + fmtClock(introSkip)) : "") +
+            (dropAt ? ("  \u00b7  drop at " + fmtClock(dropAt)) : "") +
+            (tb && tb.best && tb.best.score ? ("  \u00b7  your best here " + tb.best.score.toLocaleString("en-IN")) : "") +
             "  \u00b7  press Start to dance.", "ok");
           loadingTrack = false;
           // If the arena is already moving \u2014 Start was pressed while this was
@@ -582,6 +810,22 @@
             unlockAudio().then(function () { playBuffer(); updateMuteBtn(); });
           }
           updateMuteBtn();
+          renderLastTrack();
+        }
+        if (cached && cached.period > 0) {
+          // A remembered grid skips the slow part. The decode above still had to
+          // happen; the analysis \u2014 the part that hitches \u2014 does not.
+          adopt({ period: cached.period, phase: cached.phase, bpm: cached.bpm,
+                  intro: cached.intro, drop: cached.drop }, true);
+          return;
+        }
+        return analyzeAsync(buf, setAnalysisProgress.bind(null, true)).then(function (grid) {
+          if (grid) {
+            cacheTrack(currentTrackKey, grid, raw);
+            lastTrack = { key: currentTrackKey, name: file.name };
+            saveStore(LAST_KEY, lastTrack);
+          }
+          adopt(grid, false);
         });
       }).catch(function () {
         setAnalysisProgress(false, 0);
@@ -612,7 +856,9 @@
     var report = function (p) { if (onProgress) onProgress(p); };
     try {
       var sr = buf.sampleRate;
-      var maxSec = Math.min(buf.duration, 120);          // 2 min is plenty to find a tempo
+      // The whole track, not two minutes: a drift map that stops at 2:00 is no
+      // use on a 6:00 track. Long files are capped so a podcast cannot hang it.
+      var maxSec = Math.min(buf.duration, 600);
       var len = Math.floor(maxSec * sr);
       if (len < sr * 2) return null;
       var ch0 = buf.getChannelData(0);
@@ -652,13 +898,14 @@
       await tickUI();
 
       var minGap = Math.round(0.15 / 0.01);
-      var onsets = 0;
+      var onsets = 0, onsetHops = [];
       var i = 1;
       while (i < nHops - 1) {
         if (flux[i] > thr) {
           var jEnd = Math.min(nHops - 1, i + minGap), bj = i, bv = flux[i];
           for (var j = i + 1; j <= jEnd; j++) { if (flux[j] > bv) { bv = flux[j]; bj = j; } }
           onsets++;
+          onsetHops.push(bj);
           i = bj + minGap;
         } else { i++; }
       }
@@ -709,20 +956,235 @@
 
       var period = periodSamples * 0.01;
       if (!isFinite(period) || period <= 0) return null;
+      var phaseSec = bestPhase * 0.01;
+
+      // ---- sections: where the track lifts ---------------------------------
+      // The envelope already holds the answer to "where is the drop": the first
+      // sustained swell after the intro. One grid over a whole song says every
+      // bar is the same; this is the part the game can react to. The test is
+      // relative to the rest of the track, so a quiet master and a hot one both
+      // report the same section.
+      var drop = 0;
+      if (peakEnv > 0) {
+        var runHops = Math.round(2 / 0.01), stepHops = Math.round(1 / 0.01);
+        var means = [], dAcc, dn, dk, dh;
+        for (dh = Math.round(intro / 0.01) + stepHops; dh + runHops < nHops; dh += stepHops) {
+          dAcc = 0; dn = 0;
+          for (dk = dh; dk < dh + runHops; dk += 4) { dAcc += env[dk]; dn++; }
+          means.push({ t: dh * 0.01, m: dAcc / dn });
+        }
+        if (means.length >= 3) {
+          var maxM = 0, mi, mj;
+          for (mi = 0; mi < means.length; mi++) if (means[mi].m > maxM) maxM = means[mi].m;
+          var sortedM = means.map(function (x) { return x.m; }).sort(function (a, b) { return a - b; });
+          var medM = sortedM[sortedM.length >> 1];
+          for (mj = 0; mj < means.length; mj++) {
+            if (means[mj].m >= maxM * 0.9 && means[mj].m > medM * 1.15) { drop = means[mj].t; break; }
+          }
+        }
+        if (drop && drop - intro < 2) drop = 0;   // opening at full tilt is not a drop
+      }
+
+      // ---- drift: a tempo map only when the tempo really moves ---------------
+      // A linear ramp is the common case (a build, a live kit, a DJ mix), and it
+      // makes one affine grid wrong in the middle of the song. Fitting
+      // t = a + b*k + c*k^2 to the onsets handles that exactly; the plain grid is
+      // the c = 0 case, so a steady track keeps the map it was verified with and
+      // a noisy one cannot quietly replace it.
+      var q = null;
+      if (onsetHops.length >= 12 && nHops * 0.01 > period * 24) {
+        // Beat numbers are assigned by walking the onsets, not by dividing the
+        // clock by one average period: on a ramp an average drifts a whole beat
+        // by the end of the track, and every assignment after that is wrong.
+        var ks = [], ts = [], kCur = 0, prevT2 = -1, stepB, oi, to, n, kBar = 0;
+        for (oi = 0; oi < onsetHops.length; oi++) {
+          to = onsetHops[oi] * 0.01;
+          if (prevT2 < 0) { prevT2 = to; kCur = 0; }
+          else {
+            stepB = Math.round((to - prevT2) / period);
+            if (stepB < 1) stepB = 1;
+            kCur += stepB;
+            prevT2 = to;
+          }
+          ks.push(kCur); ts.push(to);
+        }
+        n = ks.length;
+        for (oi = 0; oi < n; oi++) kBar += ks[oi];
+        kBar = n ? kBar / n : 0;
+        if (n >= 12) {
+          // Fit around the mean beat number. The raw normal equations are scaled
+          // by k^4 (10^10 for a minute of music) and lose all their precision;
+          // centring keeps the board solvable in doubles.
+          var v0 = 0, v1 = 0, v2 = 0, v3 = 0, v4 = 0, w0 = 0, w1 = 0, w2 = 0, oi2, kc;
+          for (oi2 = 0; oi2 < n; oi2++) {
+            kc = ks[oi2] - kBar;
+            v0 += 1; v1 += kc; v2 += kc * kc; v3 += kc * kc * kc; v4 += kc * kc * kc * kc;
+            w0 += ts[oi2]; w1 += ts[oi2] * kc; w2 += ts[oi2] * kc * kc;
+          }
+          var M = [[v0, v1, v2, w0], [v1, v2, v3, w1], [v2, v3, v4, w2]];
+          for (var col = 0; col < 3; col++) {
+            var piv = col, r2, r3, cc;
+            for (r2 = col + 1; r2 < 3; r2++) if (Math.abs(M[r2][col]) > Math.abs(M[piv][col])) piv = r2;
+            var swap = M[col]; M[col] = M[piv]; M[piv] = swap;
+            var d0 = M[col][col];
+            if (Math.abs(d0) < 1e-9) { M = null; break; }
+            for (cc = col; cc < 4; cc++) M[col][cc] /= d0;
+            for (r3 = 0; r3 < 3; r3++) {
+              if (r3 === col) continue;
+              var f0 = M[r3][col];
+              for (cc = col; cc < 4; cc++) M[r3][cc] -= f0 * M[col][cc];
+            }
+          }
+          if (M) {
+            // Back out of centred coordinates: t = A + B*u + C*u^2, u = k - kBar.
+            var A0 = M[0][3], B0 = M[1][3], C0 = M[2][3];
+            var aF = A0 - B0 * kBar + C0 * kBar * kBar;
+            var bF = B0 - 2 * C0 * kBar;
+            var cF = C0;
+            // A fit that does not actually follow the kicks is not a map.
+            var err = 0, oj, pred;
+            for (oj = 0; oj < n; oj++) {
+              pred = aF + bF * ks[oj] + cF * ks[oj] * ks[oj];
+              err += (ts[oj] - pred) * (ts[oj] - pred);
+            }
+            var rms = Math.sqrt(err / Math.max(1, n));
+            var bend = Math.abs(cF) * kCur * kCur;
+            // A beat has to stay a beat: the local period must not collapse or go
+            // negative anywhere in the track before this map is trusted.
+            var localMin = bF, localMax = bF, kk3;
+            for (kk3 = 0; kk3 <= kCur; kk3 += Math.max(1, Math.round(kCur / 24))) {
+              var lp = bF + 2 * cF * kk3;
+              if (lp < localMin) localMin = lp;
+              if (lp > localMax) localMax = lp;
+            }
+            if (rms < 0.05 && bF > 0.12 && bF < 2 && localMin > 0.12 && localMax < 2 && bend > 0.02) {
+              q = { a: aF, b: bF, c: cF };
+            }
+          }
+        }
+      }
+
       report(1);
-      return { period: period, phase: bestPhase * 0.01, bpm: Math.round(60 / period), intro: intro };
+      return { period: period, phase: phaseSec, bpm: Math.round(60 / period),
+               intro: intro, drop: drop, q: q };
     } catch (err) {
       return null;
     }
   }
 
+  /* ---- the analysis runs in a worker ----------------------------------
+     The DSP is pure: no DOM, no audio nodes, nothing but numbers. So the worker
+     is built from the very same function by stringifying it — one file, one
+     copy of the algorithm, and a long track stops hitching the tab. Four things
+     can go wrong out there: no Worker at all, a blob URL the browser refuses to
+     load, samples that will not transfer, and a worker that dies mid-run. All of
+     them end in the same place — the same function runs inline, once. */
+  // Which road the analysis took, for anything that needs to ask (a diagnostic in
+  // the same spirit as danceFightAudio; null until a track has been analysed).
+  var analysisMode = null;
+  window.danceFightAnalysis = function () { return analysisMode; };
+  function analyzeAsync(buf, onProgress) {
+    if (typeof Worker === "undefined" || typeof Blob === "undefined" ||
+        !window.URL || !URL.createObjectURL) {
+      analysisMode = "inline";
+      return analyzeBuffer(buf, onProgress);
+    }
+    return new Promise(function (resolve) {
+      var w = null, url = null, done = false;
+      function finish(g) {
+        if (done) return;
+        done = true;
+        try { if (w) w.terminate(); } catch (e) {}
+        if (url) { try { URL.revokeObjectURL(url); } catch (e2) {} }
+        resolve(g);
+      }
+      // The one road back to the main thread. done means a late worker error
+      // cannot start a second analysis of the same buffer.
+      function inline() {
+        if (done) return;
+        analysisMode = "inline";
+        analyzeBuffer(buf, onProgress).then(finish, function () { finish(null); });
+      }
+      try {
+        var src = "var tickUI = function () { return Promise.resolve(); };\n" +
+          analyzeBuffer.toString() + "\n" +
+          "self.onmessage = function (e) {\n" +
+          "  var d = e.data.buf;\n" +
+          // structured clone drops prototypes, so rebuild the two methods the DSP uses
+          "  var buf = { sampleRate: d.sampleRate, duration: d.duration, length: d.length,\n" +
+          "    numberOfChannels: d.chans.length,\n" +
+          "    getChannelData: function (i) { return d.chans[i]; } };\n" +
+          "  analyzeBuffer(buf, function (p) { self.postMessage({ progress: p }); })\n" +
+          "    .then(function (g) { self.postMessage({ grid: g }); });\n" +
+          "};\n";
+        url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+        w = new Worker(url);
+        analysisMode = "worker";
+      } catch (e) { inline(); return; }
+      w.onmessage = function (ev) {
+        if (done) return;
+        var d = ev.data || {};
+        if (d.progress !== undefined && onProgress) onProgress(d.progress);
+        if ("grid" in d) finish(d.grid);
+      };
+      // An AudioBuffer is not cloneable in Chrome, so the worker gets the samples
+      // it actually uses: one mono mixdown, transferred rather than copied. The
+      // analysis already averages the two channels, so the result is identical
+      // and the decoded buffer is left untouched for playback.
+      // No worker arrived (a blocked blob URL, a crash, a policy): analyse here
+      // instead of leaving the promise hanging forever.
+      w.onerror = function (e) { if (e && e.preventDefault) e.preventDefault(); inline(); };
+      try {
+        var frames = Math.min(buf.length, Math.floor(Math.min(buf.duration, 600) * buf.sampleRate));
+        var mono = new Float32Array(frames);
+        var c0 = buf.getChannelData(0);
+        var c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+        for (var fi = 0; fi < frames; fi++) mono[fi] = c1 ? (c0[fi] + c1[fi]) * 0.5 : c0[fi];
+        w.postMessage({ buf: { sampleRate: buf.sampleRate, duration: frames / buf.sampleRate, chans: [mono] } },
+                      [mono.buffer]);
+      } catch (e) { inline(); }
+    });
+  }
+
+  /* ---- where the playhead is -------------------------------------------------
+     One function answers "what buffer time is it at audio time t". Everything
+     else — playhead, judgement, the loop — goes through it, so a slowed loop and
+     a normal track cannot disagree about where the music is. */
+  function bufferPosition(atSec) {
+    if (!actx) return 0;
+    var t = (typeof atSec === "number") ? atSec : actx.currentTime;
+    var el = (t - playStartTime) * playRate;
+    if (el < 0) el = 0;
+    if (synth) return el;                    // the practice groove is generated live
+    if (!audioBuf) return 0;
+    if (loopOn) {
+      var span = Math.max(0.05, loopTo - loopFrom);
+      var p = playStartAt + el;
+      if (p >= loopTo) p = loopFrom + ((p - loopFrom) % span);
+      return p;
+    }
+    return (playStartAt + el) % audioBuf.duration;
+  }
   function playbackPos() {
     if (!playing || !actx) return 0;
-    var el = actx.currentTime - playStartTime;
-    if (el < 0) el = 0;
-    if (audioBuf) return (playStartAt + el) % audioBuf.duration;
-    if (synth) return el;          // the practice groove is generated live
-    return 0;
+    return bufferPosition();
+  }
+  function syncClock() {
+    if (!actx) return;
+    clockRef.perf = performance.now();
+    clockRef.audio = actx.currentTime;
+  }
+  // A KeyboardEvent's timeStamp is on the performance.now() timeline. Map it onto
+  // the audio clock: a press that arrived 20 ms before this frame still gets
+  // judged at 20 ms before this frame. Old Safari reports wall-clock stamps, so
+  // anything out of range falls back to "now" rather than judging nonsense.
+  function eventAudioTime(ev) {
+    if (!actx) return null;
+    syncClock();
+    var nowPerf = performance.now();
+    var stamp = ev && typeof ev.timeStamp === "number" && ev.timeStamp > 0 ? ev.timeStamp : nowPerf;
+    if (stamp > nowPerf + 1 || nowPerf - stamp > 2000) stamp = nowPerf;
+    return clockRef.audio - (nowPerf - stamp) / 1000;
   }
 
   function playBuffer() {
@@ -737,7 +1199,14 @@
       // Start after any silent lead-in: dancing to a ten-second count-in is not
       // dancing. The playhead adds the same offset back, so the beat grid — which
       // is measured from the start of the buffer — still lines up exactly.
-      var from = introSkip > 0 ? Math.min(introSkip, Math.max(0, audioBuf.duration - 0.25)) : 0;
+      var from = loopOn ? loopFrom
+        : (introSkip > 0 ? Math.min(introSkip, Math.max(0, audioBuf.duration - 0.25)) : 0);
+      if (loopOn) {
+        srcNode.loop = true;
+        srcNode.loopStart = loopFrom;
+        srcNode.loopEnd = loopTo;
+      }
+      if (playRate !== 1) srcNode.playbackRate.value = playRate;
       srcNode.start(0, from);
       playStartAt = from;
     } catch (err) {
@@ -904,10 +1373,13 @@
     toast("Re-listening to the next few bars\u2026");
     var slice = sliceBuffer(audioBuf, pos, secs);
     if (!slice) { toast("Too near the end of the loop to re-listen."); return; }
-    analyzeBuffer(slice, function () {}).then(function (g) {
+    analyzeAsync(slice, function () {}).then(function (g) {
       if (!g) { toast("No clear pulse there \u2014 keeping the current grid."); return; }
       var phase = (pos + g.phase) % g.period;
-      beatGrid = { period: g.period, phase: phase, bpm: g.bpm };
+      // A re-lock is a fresh single grid from here on: the old drift map covered
+      // a different stretch of the track and the drop has already gone by.
+      beatGrid = { period: g.period, phase: phase, bpm: g.bpm, q: null };
+      dropAt = 0; dropFired = false;
       beatGridSynthetic = false;
       lastBeatIdx = Math.floor((playbackPos() - phase) / g.period);
       lastHudBpm = -1;
@@ -1024,33 +1496,87 @@
   // keeps an absurd tempo from making the window impossible (very fast) or
   // trivial (very slow).
   var BEAT_WINDOW_MS = 80, BEAT_WINDOW_MIN = 0.08, BEAT_WINDOW_MAX = 0.26;
+  // A rehearsal loop can run at half speed. The window is 80 ms of *heard* time,
+  // which is 40 ms of buffer time at 0.5x — so the fraction has to follow the
+  // rate, or slowing a track down would quietly halve the difficulty.
+  function periodAt(pos) {
+    var g = beatGrid;
+    if (!g) return 1;
+    if (g.q) {
+      // dt/dk of the fit: the local beat length, so the window is right on a
+      // track whose tempo is moving under it.
+      var k = beatPhaseAt(pos, false);
+      return Math.max(0.12, g.q.b + 2 * g.q.c * k);
+    }
+    return g.period;
+  }
   function beatWindow() {
     if (!(playing && beatGrid)) return 0.17;
-    var f = (BEAT_WINDOW_MS / 1000) / beatGrid.period;
+    var f = (BEAT_WINDOW_MS / 1000) * playRate / periodAt(playbackPos());
     return Math.max(BEAT_WINDOW_MIN, Math.min(BEAT_WINDOW_MAX, f));
   }
-
-  // With an analysed grid this is exact: how far the playhead sits from a beat.
-  // settings.offsetMs shifts the judgement window onto when this player actually
-  // hears the beat (headphones, Bluetooth, a slow decoder) without touching the
-  // audio or the dance, so the groove stays frame-locked.
-  function isOnBeat() {
-    var fr;
-    if (playing && beatGrid) {
-      fr = (playbackPos() - beatGrid.phase - settings.offsetMs / 1000) / beatGrid.period;
-    } else {
-      fr = beat.phase;
-    }
-    fr = fr - Math.floor(fr);
+  function judgeWindow() {
     var w = beatWindow();
-    return fr < w || fr > 1 - w;
+    return settings.judge === "strict" ? w * 0.6 : w;
   }
 
-  // How far through the current beat we are, 0..1, with no offset applied.
-  function beatFractionNow() {
-    var fr = (playing && beatGrid) ? (playbackPos() - beatGrid.phase) / beatGrid.period : beat.phase;
-    return fr - Math.floor(fr);
+  // Continuous beat position at a buffer time. With a drift map the local window
+  // decides the period, so bar 200 is as locked as bar 2. The offset shifts the
+  // judgement only; the dance keeps using the raw position.
+  function beatPhaseAt(pos, withOffset) {
+    var g = beatGrid;
+    if (!g) return beat.phase;
+    var p = withOffset ? pos - (settings.offsetMs / 1000) * playRate : pos;
+    if (g.q) {
+      // Invert t = a + b*k + c*k^2. Two roots, and the linear estimate says which
+      // one is the beat we are actually near.
+      var q = g.q;
+      var lin = (p - q.a) / q.b;
+      if (Math.abs(q.c) < 1e-12) return lin;
+      var disc = q.b * q.b + 4 * q.c * (p - q.a);
+      if (disc <= 0) return lin;
+      var r1 = (-q.b + Math.sqrt(disc)) / (2 * q.c);
+      var r2 = (-q.b - Math.sqrt(disc)) / (2 * q.c);
+      return Math.abs(r1 - lin) <= Math.abs(r2 - lin) ? r1 : r2;
+    }
+    return (p - g.phase) / g.period;
   }
+  function beatIndexAt(pos) {
+    if (!beatGrid) return null;
+    return Math.floor(beatPhaseAt(pos, false));
+  }
+  function beatFractionNow() {
+    var b = beatPhaseAt(playbackPos(), false);
+    return b - Math.floor(b);
+  }
+  // Signed distance from the nearest beat in milliseconds; positive means late.
+  function beatOffsetMs(atSec) {
+    if (!(playing && beatGrid)) return null;
+    var pos = (typeof atSec === "number") ? bufferPosition(atSec) : playbackPos();
+    var b = beatPhaseAt(pos, true);
+    var frac = b - Math.round(b);
+    // Buffer seconds back into real time: at 0.5x the buffer moves half as fast,
+    // so 40 ms of buffer is 80 ms of what the player actually heard.
+    return frac * periodAt(pos) * 1000 / playRate;
+  }
+
+  // Three grades, not two. A hit 60 ms out and one 250 ms out are not the same
+  // mistake, and calling both "not perfect" tells a player nothing about which
+  // way to move. GREAT is worth 1.15x and still builds the combo.
+  function gradeAt(atSec) {
+    if (!(playing && beatGrid)) return { grade: "off", ms: 0 };
+    var pos = (typeof atSec === "number") ? bufferPosition(atSec) : playbackPos();
+    var b = beatPhaseAt(pos, true);
+    var frac = b - Math.round(b);
+    var a = Math.abs(frac);
+    var w = judgeWindow();
+    var great = Math.min(0.5, w * 2.2);
+    var ms = frac * periodAt(pos) * 1000 / playRate;
+    if (a <= w) return { grade: "perfect", ms: ms };
+    if (a <= great) return { grade: "great", ms: ms };
+    return { grade: "off", ms: ms };
+  }
+  function isOnBeat(atSec) { return gradeAt(atSec).grade === "perfect"; }
 
   /* ============================================================
      RIG — forward-kinematic skeleton, angles in degrees
@@ -1077,14 +1603,16 @@
     var lean = pose.lean || 0;
     // depth is |cos(spin)|: 1 facing us, 0 in profile. The shoulder and hip
     // sockets are the body's width axis, so they fold towards the spine as the
-    // figure turns instead of the whole body being squashed flat.
+    // figure turns instead of the whole body being squashed flat. The far socket
+    // sits just outside the torso's shoulder edge, so the far arm has air beside
+    // the body to be seen in rather than being buried behind the chest.
     var d = (depth === undefined) ? 1 : depth;
     var pelvis = [pose.pelvisX || 0, -(pose.pelvisY === undefined ? 96 : pose.pelvisY)];
     var dir = [Math.sin(lean * Math.PI / 180), -Math.cos(lean * Math.PI / 180)]; // up the spine
     var perp = [Math.cos(lean * Math.PI / 180), Math.sin(lean * Math.PI / 180)]; // forward across the body
     var neck = [pelvis[0] + dir[0] * BODY.torso, pelvis[1] + dir[1] * BODY.torso];
     var headC = [neck[0] + dir[0] * BODY.neck, neck[1] + dir[1] * BODY.neck];
-    var shSep = BODY.shW * 0.44 * d;
+    var shSep = BODY.shW * 0.56 * d;
     var shF = [neck[0] + perp[0] * shSep + dir[0] * (pose.shrugF || 0),
                neck[1] + perp[1] * shSep + dir[1] * (pose.shrugF || 0)];
     var shB = [neck[0] - perp[0] * shSep + dir[0] * (pose.shrugB || 0),
@@ -1357,13 +1885,17 @@
   var player, enemy;
   var state = "menu"; // menu | fight | over
   var particles = [], popups = [], rings = [], shake = 0, flashScreen = 0, hitStop = 0;
-  var score = 0, bestCombo = 0, perfectHits = 0, roundEnded = false;
+  var score = 0, bestCombo = 0, perfectHits = 0, greatHits = 0, roundEnded = false;
+  // Every landed attack's signed distance from the beat, so the end screen can
+  // tell a player which way they lean instead of only that they missed.
+  var hitOffsets = [], practiceHits = 0;
 
   function resetFight() {
     player = makeChar(478, 1, PAL_PLAYER, 0, "You");
     enemy = makeChar(806, -1, PAL_ENEMY, 0.5, "Rival");
     particles = []; popups = []; shake = 0; flashScreen = 0; hitStop = 0;
-    score = 0; bestCombo = 0; perfectHits = 0; roundEnded = false;
+    score = 0; bestCombo = 0; perfectHits = 0; greatHits = 0; roundEnded = false;
+    hitOffsets = []; practiceHits = 0;
     state = "fight";
     document.getElementById("endScreen").classList.add("hidden");
   }
@@ -1373,21 +1905,29 @@
      ============================================================ */
   var keys = {};
   var tap = {};           // key -> time of press, so a very quick tap is never lost between frames
+  var tapAt = {};         // key -> the audio-clock instant the press happened
   var TAP_WINDOW = 0.22;  // seconds an unconsumed press stays queued
+  var armAction = null;   // which action the key rebinder is waiting for
 
   function tapFresh(k) { return tap[k] !== undefined && (T - tap[k]) < TAP_WINDOW; }
-  function consumeTap(k) { delete tap[k]; }
+  function consumeTap(k) { delete tap[k]; delete tapAt[k]; }
+  // The instant to judge a press by: the moment the key went down, not the frame
+  // that got around to noticing it. Null means "judge right now" (held keys, AI).
+  function tapSec(k) { return tapFresh(k) && typeof tapAt[k] === "number" ? tapAt[k] : null; }
+  function km(action) { return (settings.map && settings.map[action]) || DEFAULT_MAP[action]; }
 
   // Keyboard and on-screen buttons feed the same input state, so touch and
   // keys are interchangeable.
-  function pressKey(k) { if (!keys[k]) tap[k] = T; keys[k] = true; }
+  function pressKey(k, atSec) { if (!keys[k]) { tap[k] = T; tapAt[k] = atSec; } keys[k] = true; }
   function releaseKey(k) { keys[k] = false; }
 
   window.addEventListener("keydown", function (e) {
     var k = e.key.toLowerCase();
-    pressKey(k);
+    if (armAction) { assignKey(k, e); return; }
+    pressKey(k, eventAudioTime(e));
     if (["arrowleft", "arrowright", "arrowup", "arrowdown", " "].indexOf(k) >= 0) e.preventDefault();
-    if (k === "p" && state === "fight") toggleMusic();
+    if (k === "p" && (state === "fight" || state === "practice")) { togglePause(); return; }
+    if (k === "escape" && state === "practice") quitRound();
   });
   window.addEventListener("keyup", function (e) {
     releaseKey(e.key.toLowerCase());
@@ -1397,7 +1937,7 @@
   /* ============================================================
      COMBAT
      ============================================================ */
-  function startMove(c, m) {
+  function startMove(c, m, atSec, quiet) {
     if (m.meter < 0 && c.meter < 100) return false;
     if (m.meter < 0) c.meter = Math.max(0, c.meter + m.meter);
     else c.meter = Math.min(100, c.meter + m.meter);
@@ -1405,9 +1945,17 @@
     c.move = m;
     c.frame = 0;
     c.hitDone = false;
-    c.onBeatMove = isOnBeat();
-    if (c.onBeatMove) c.meter = Math.min(100, c.meter + 4);
-    if (c === player) showMoveName(m.name, c.onBeatMove);
+    // The rival's wind-ups are quantised to the grid, but it is not a player and
+    // does not get the player's on-beat damage bonus: `quiet` marks the move as
+    // beat-timed for the telegraph and the dodge reward without grading it.
+    var g = quiet ? { grade: "off", ms: 0 } : gradeAt(atSec);
+    c.grade = g.grade;
+    c.onBeatMove = g.grade === "perfect";
+    c.hitOffset = g.ms;
+    c.beatTimed = !!quiet;
+    if (c.grade === "perfect") c.meter = Math.min(100, c.meter + 4);
+    else if (c.grade === "great") c.meter = Math.min(100, c.meter + 2);
+    if (c === player) showMoveName(m.name, g.grade);
     return true;
   }
 
@@ -1427,16 +1975,32 @@
     }
   }
 
-  function landHit(atk, def, m) {
-    var perfect = atk.onBeatMove;
-    var blocked = (def.state === "block");
-    var comboMul = 1 + Math.min(atk.combo, 12) * 0.07;
-    var dmg = m.dmg * comboMul * (perfect ? 1.6 : 1);
+  /* ==== FIGHT-LIB START ====
+     The combat maths and nothing else: no DOM, no canvas, no audio. Tools can
+     extract exactly this block (see tools/fight-check.mjs) and drive it with a
+     simulated round, so a damage or scoring change has to answer to a number. */
+  var GRADE_DMG = { perfect: 1.6, great: 1.15, off: 1 };
+  function comboMultiplier(combo) { return 1 + Math.min(combo || 0, 12) * 0.07; }
+  function hitDamage(m, combo, grade, blocked, isEnemy, diffDmg) {
+    var dmg = m.dmg * comboMultiplier(combo) * (GRADE_DMG[grade] || 1);
     if (blocked) dmg *= 0.22;
     // The rival hits harder on Hard and softer on Easy; the player's own damage
-    // is never scaled, so the combo/perfect maths stays exactly as it was.
-    if (atk === enemy) dmg *= (DIFFS[settings.difficulty] || DIFFS.normal).dmg;
-    dmg = Math.round(dmg);
+    // is never scaled, so the combo/grade maths is identical on every setting.
+    if (isEnemy) dmg *= diffDmg;
+    return Math.round(dmg);
+  }
+  function hitScore(dmg, grade, combo) {
+    return Math.round(dmg * 10 * (GRADE_DMG[grade] || 1) * (1 + combo * 0.08));
+  }
+  function hitstunFor(m) { return m.dmg >= 13 ? 0.46 : (m.dmg >= 10 ? 0.34 : 0.24); }
+  /* ==== FIGHT-LIB END ==== */
+
+  function landHit(atk, def, m) {
+    var grade = atk.grade || (atk.onBeatMove ? "perfect" : "off");
+    var perfect = grade === "perfect";
+    var blocked = (def.state === "block");
+    var dmg = hitDamage(m, atk.combo, grade, blocked, atk === enemy,
+                        (DIFFS[settings.difficulty] || DIFFS.normal).dmg);
 
     def.hp = Math.max(0, def.hp - dmg);
     def.flash = 1;
@@ -1444,13 +2008,14 @@
     var dir = Math.sign(def.x - atk.x) || 1;
     if (!blocked) {
       def.state = "hit";
-      def.hitstun = m.dmg >= 13 ? 0.46 : (m.dmg >= 10 ? 0.34 : 0.24);
+      def.hitstun = hitstunFor(m);
       def.knock = dir * (m.kb + (perfect ? 90 : 0));
       def.combo = 0;
       def.move = null;
     } else {
       def.knock = dir * 40;
-      def.meter = Math.min(100, def.meter + 7);
+      // Guarding a beat-timed rival attack is dancing to it, so it pays more.
+      def.meter = Math.min(100, def.meter + (atk.beatTimed ? 12 : 7));
       def.guard = 1;
     }
 
@@ -1458,25 +2023,35 @@
     if (atk === player) {
       bestCombo = Math.max(bestCombo, atk.combo);
       if (perfect) perfectHits++;
-      score += Math.round(dmg * 10 * (perfect ? 1.6 : 1) * (1 + atk.combo * 0.08));
-      if (perfect) showComboText("PERFECT ×" + atk.combo);
+      if (grade === "great") greatHits++;
+      if (typeof atk.hitOffset === "number") { hitOffsets.push(atk.hitOffset); practiceHits++; }
+      score += hitScore(dmg, grade, atk.combo);
+      if (perfect) { showComboText("PERFECT ×" + atk.combo); buzz(14); }
+      else if (grade === "great") showComboText("GREAT ×" + atk.combo);
       else if (atk.combo >= 3) showComboText(atk.combo + " HIT COMBO");
+      if (perfect && atk.combo > 0 && atk.combo % 10 === 0) announce(atk.combo + " hit combo");
     }
 
+    var great = grade === "great";
     var cx = (atk.x + def.x) / 2;
     var cy = GROUND_Y - 110 - (def.y + atk.y) / 2;
-    var hitCol = perfect ? "#ffd23f" : (atk === player ? "#5ef0ff" : "#ffb057");
-    burst(cx, cy, perfect ? 26 : 14, hitCol, m.dmg);
+    var hitCol = perfect ? "#ffd23f" : (great ? "#63f7ff" : (atk === player ? "#5ef0ff" : "#ffb057"));
+    burst(cx, cy, perfect ? 26 : (great ? 18 : 14), hitCol, m.dmg);
     rings.push({ x: cx, y: cy, r: 8, grow: m.special ? 120 : (perfect ? 74 : 52),
                  life: m.special ? 0.5 : 0.32, max: m.special ? 0.5 : 0.32, col: hitCol });
-    popup(cx, cy - 30, dmg + (perfect ? " PERFECT" : ""), perfect ? "#ffd23f" : "#ffffff", perfect ? 34 : 26);
+    popup(cx, cy - 30, dmg + (perfect ? " PERFECT" : (great ? " GREAT" : "")),
+          perfect ? "#ffd23f" : (great ? "#63f7ff" : "#ffffff"), perfect ? 34 : 26);
 
     shake += (m.special ? 26 : (perfect ? 12 : 7)) + m.dmg * 0.35;
-    if (m.special) { flashScreen = 0.85; hitStop = 0.16; }
-    else if (perfect) { flashScreen = 0.22; hitStop = 0.05; }
+    // Flashing is a photosensitivity question, not a taste one. "Limited" caps the
+    // strobe at a dim pulse so the screen is never driven to white.
+    var flashCap = (settings.flash === "safe" || reduceMotion) ? 0.18 : 1;
+    if (m.special) { flashScreen = 0.85 * flashCap; hitStop = 0.16; if (perfect) buzz([24, 30, 40]); }
+    else if (perfect) { flashScreen = 0.22 * flashCap; hitStop = 0.05; }
     // Reduced motion keeps the hit-stop (it is timing, not decoration) and drops
     // the shake and the full-screen flash.
     if (reduceMotion) { shake = 0; flashScreen = 0; }
+    else if (settings.flash === "safe") shake = Math.min(shake, 12);
   }
 
   function burst(x, y, n, col, power) {
@@ -1551,14 +2126,17 @@
     }
 
     // ---- free actions ----
-    var left = keys["a"] || keys["arrowleft"];
-    var right = keys["d"] || keys["arrowright"];
-    var down = keys["s"] || keys["arrowdown"] || tapFresh("s") || tapFresh("arrowdown");
-    var up = keys["w"] || keys["arrowup"] || tapFresh("w") || tapFresh("arrowup");
-    var sp = keys[" "] || tapFresh(" ");
-    var jj = keys["j"] || tapFresh("j");
-    var kk = keys["k"] || tapFresh("k");
-    var ll = keys["l"] || tapFresh("l");
+    // Every action goes through the key map, so a rebound key is the only key.
+    var kLeft = km("left"), kRight = km("right"), kUp = km("up"), kDown = km("down");
+    var kJab = km("jab"), kKick = km("kick"), kUpper = km("upper"), kFin = km("fin");
+    var left = keys[kLeft] || keys["arrowleft"];
+    var right = keys[kRight] || keys["arrowright"];
+    var down = keys[kDown] || keys["arrowdown"] || tapFresh(kDown) || tapFresh("arrowdown");
+    var up = keys[kUp] || keys["arrowup"] || tapFresh(kUp) || tapFresh("arrowup");
+    var sp = keys[kFin] || tapFresh(kFin);
+    var jj = keys[kJab] || tapFresh(kJab);
+    var kk = keys[kKick] || tapFresh(kKick);
+    var ll = keys[kUpper] || tapFresh(kUpper);
 
     if (p.state === "block" && !down) p.state = "idle";
 
@@ -1566,16 +2144,16 @@
       if (down && p.onGround) {
         p.state = "block";
       } else if (sp && p.meter >= 100 && p.cd <= 0) {
-        if (startMove(p, MOVES.fin)) consumeTap(" ");
+        if (startMove(p, MOVES.fin, tapSec(kFin))) consumeTap(kFin);
       } else if (ll && p.cd <= 0) {
-        if (startMove(p, MOVES.upper)) consumeTap("l");
+        if (startMove(p, MOVES.upper, tapSec(kUpper))) consumeTap(kUpper);
       } else if (kk && p.cd <= 0) {
-        if (startMove(p, MOVES.kick)) consumeTap("k");
+        if (startMove(p, MOVES.kick, tapSec(kKick))) consumeTap(kKick);
       } else if (jj && p.cd <= 0) {
-        if (startMove(p, MOVES.jab)) consumeTap("j");
+        if (startMove(p, MOVES.jab, tapSec(kJab))) consumeTap(kJab);
       } else if (up && p.onGround) {
         p.vy = -470; p.onGround = false;
-        consumeTap("w"); consumeTap("arrowup");
+        consumeTap(kUp); consumeTap("arrowup");
         burst(p.x, GROUND_Y - 4, 8, "#5ef0ff", 3);
       }
     }
@@ -1604,6 +2182,24 @@
   /* ============================================================
      UPDATE — enemy AI
      ============================================================ */
+  // Seconds until a beat that is at least `lead` away, so a wind-up can be timed
+  // to make the hit itself land on the grid.
+  function waitToBeat(lead) {
+    if (!(playing && beatGrid)) return 0;
+    var pos = playbackPos();
+    var period = periodAt(pos);
+    var b = beatPhaseAt(pos, false);
+    var next = (Math.floor(b) + 1 - b) * period;
+    while (next < lead) next += period;
+    return next;
+  }
+  function queueEnemyMove(m, dist) {
+    enemy.pending = m;
+    enemy.pendingAt = T + Math.max(0, waitToBeat(m.from) - m.from);
+    enemy.pendingDist = dist;
+    enemy.walkDir = enemy.facing;
+  }
+
   function updateEnemy(dt) {
     var e = enemy, p = player;
     var D = DIFFS[settings.difficulty] || DIFFS.normal;
@@ -1625,6 +2221,20 @@
 
     var dist = Math.abs(p.x - e.x);
 
+    // A committed attack waits for the next beat before it starts. The wind-up
+    // then lands on the grid: the thing you dodge is the rhythm, not a timer.
+    if (e.pending) {
+      if (T >= e.pendingAt) {
+        var pm = e.pending;
+        e.pending = null;
+        startMove(e, pm, null, true);
+        return;
+      }
+      if (dist > 150) { e.x += e.facing * 150 * D.speed * dt; clampPos(e); }
+      applyKnock(e, dt);
+      return;
+    }
+
     if (e.state === "block") {
       e.blockT -= dt;
       if (e.blockT <= 0) e.state = "idle";
@@ -1641,7 +2251,9 @@
     e.think -= dt;
     if (e.think <= 0) {
       // gets a little sharper as the fight goes on
-      var aggro = D.aggro + Math.min(0.3, (T - fightStart) * 0.02);
+      // THE DROP: for a few seconds after the section lifts, the rival presses.
+      var surge = T < rivalSurgeUntil ? 0.18 : 0;
+      var aggro = D.aggro + surge + Math.min(0.3, (T - fightStart) * 0.02);
       e.think = (0.34 + Math.random() * (0.62 - aggro * 0.3)) * D.think;
 
       // only commit to a move the rival can actually land from here
@@ -1651,11 +2263,11 @@
         e.walkDir = -e.facing;
       } else if (dist <= 116) {
         e.walkDir = 0;
-        startMove(e, Math.random() < 0.55 ? MOVES.jab : MOVES.upper);
+        queueEnemyMove(Math.random() < 0.55 ? MOVES.jab : MOVES.upper, dist);
         return;
       } else if (dist <= 140) {
         e.walkDir = 0;
-        startMove(e, MOVES.kick);
+        queueEnemyMove(MOVES.kick, dist);
         return;
       } else {
         e.walkDir = e.facing;   // close the gap first
@@ -1883,6 +2495,16 @@
   // convenience: shaded limb, flat when it is a ghost trail
   function limbS(a, b, wa, wb, bulge, fill, line, ghost) {
     limb(a, b, wa, wb, bulge, fill, ghost ? null : darken(fill, 0.66), line);
+  }
+
+  // The far arm and leg are behind the torso, and shading them like the near
+  // side sank them into the arena's near-black background — the figure read as
+  // one-armed rather than turned away. So the far side gets a rim light drawn
+  // just under it, wide enough to clear the limb's own dark outline: the ring
+  // shows only as an edge, which is what separates a dark limb from a dark stage.
+  function farLimb(a, b, wa, wb, bulge, fill, rim, line, ghost) {
+    if (!ghost) limb(a, b, wa + 3.6, wb + 3.6, bulge, rim, null, null);
+    limb(a, b, wa, wb, bulge, fill, ghost ? null : darken(fill, 0.82), line);
   }
 
   // plain tapered capsule, used for hair
@@ -2251,12 +2873,12 @@
     }
 
     // ---- far side, behind the body -------------------------------------
-    limbS(farLeg.hip, farLeg.kn, 12.4, 9.2, 1.6, pantsLo, line, ghost);
-    limbS(farLeg.kn, farLeg.an, 9.4, 6.6, 2.0, pantsLo, line, ghost);
+    farLimb(farLeg.hip, farLeg.kn, 12.4, 9.2, 1.6, pantsLo, pants, line, ghost);
+    farLimb(farLeg.kn, farLeg.an, 9.4, 6.6, 2.0, pantsLo, pants, line, ghost);
     shoe(farLeg.an, farLeg.toe, 6.2, bootLo, sole, line, ghost);
-    limbS(farArm.sh, farArm.el, 9.4, 7.6, 1.2, coatLo, line, ghost);
-    limbS(farArm.el, farArm.wr, 7.6, 5.8, 1.4, coatLo, line, ghost);
-    handShape(farArm.wr, farArm.ang, 5.0, darken(glove, 0.78), coatLo, line, ghost);
+    farLimb(farArm.sh, farArm.el, 9.4, 7.6, 1.2, coatLo, coat, line, ghost);
+    farLimb(farArm.el, farArm.wr, 7.6, 5.8, 1.4, coatLo, coat, line, ghost);
+    handShape(farArm.wr, farArm.ang, 5.0, darken(glove, 0.86), coat, line, ghost);
 
     // ---- near leg and hips, still under the jacket ----------------------
     limbS(nearLeg.hip, nearLeg.kn, 13.2, 9.6, 1.7, pants, line, ghost);
@@ -2642,6 +3264,7 @@
       document.getElementById("sScore").textContent = score.toLocaleString("en-IN");
       document.getElementById("sCombo").textContent = bestCombo;
       document.getElementById("sPerfect").textContent = perfectHits;
+      renderTimingReport();
 
       var newBest = score > best.score && score > 0;
       best.played = (best.played || 0) + 1;
@@ -2650,11 +3273,24 @@
       best.combo = Math.max(best.combo, bestCombo);
       best.perfect = Math.max(best.perfect, perfectHits);
       saveStore(BEST_KEY, best);
+      // Per-track bests make a song a level: the same file remembers what you did
+      // on it, so coming back is a rematch rather than a fresh start.
+      var tb = null;
+      if (currentTrackKey) {
+        var prev = (trackCache[currentTrackKey] || {}).best || { score: 0, combo: 0, perfect: 0 };
+        tb = { score: Math.max(prev.score || 0, score),
+               combo: Math.max(prev.combo || 0, bestCombo),
+               perfect: Math.max(prev.perfect || 0, perfectHits) };
+        saveTrackBest(currentTrackKey, tb);
+      }
       var bn = document.getElementById("bestNote");
-      if (bn) bn.textContent = newBest
+      if (bn) bn.innerHTML = (newBest
         ? "\u2605 New personal best \u2014 " + score.toLocaleString("en-IN") + " points"
-        : "Personal best: " + best.score.toLocaleString("en-IN") + " \u00b7 " + best.wins + " won of " + best.played;
+        : "Personal best: " + best.score.toLocaleString("en-IN") + " \u00b7 " + best.wins + " won of " + best.played) +
+        (tb ? "<br/>On this track: <b>" + tb.score.toLocaleString("en-IN") + "</b> points \u00b7 " + tb.perfect + " on beat" : "");
       renderBest();
+      announce((win ? "Victory. " : (draw ? "Double knock out. " : "Defeated. ")) +
+               score + " points, best combo " + bestCombo + ", " + perfectHits + " perfect hits.");
 
       document.getElementById("endScreen").classList.remove("hidden");
     }, 1400);
@@ -2670,8 +3306,14 @@
     var dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
 
+    // A paused page still draws, but time — and with it the playhead, the grid
+    // and the fight — stops. The context is suspended as well, so resuming picks
+    // the music up where it stopped instead of jumping ahead.
+    if (paused) { updateHUD(); render(); return; }
+
     if (hitStop > 0) { hitStop -= dt; dt *= 0.22; }
     T += dt;
+    syncClock();
 
     if (playing && !muted) {
       audioLevelNow = audioLevel();
@@ -2700,11 +3342,16 @@
       // Position-locked to the analysed grid: the dance phase is read straight off
       // the playhead, so the groove cannot drift and does not depend on frame rate.
       var pos = playbackPos();
-      beat.phase = (pos - beatGrid.phase) / beatGrid.period;
+      beat.phase = beatPhaseAt(pos, false);
       var idx = Math.floor(beat.phase);
       if (idx !== lastBeatIdx) {
         if (idx > lastBeatIdx && idx - lastBeatIdx < 5) onBeat();
         lastBeatIdx = idx;
+      }
+      // The drop is a game event, not merely a loud part of the song.
+      if (dropAt > 0) {
+        if (!dropFired && pos >= dropAt - 0.05) onDrop();
+        else if (dropFired && pos < dropAt - 1) dropFired = false;
       }
     } else if (playing) {
       // fallback: live analyser, frame-rate dependent
@@ -2718,12 +3365,12 @@
     }
     beat.pulse *= Math.pow(0.05, dt);
 
-    if (state === "fight") {
+    if (state === "fight" || state === "practice") {
       updatePlayer(dt);
-      updateEnemy(dt);
-      separate();
+      if (state === "fight") { updateEnemy(dt); separate(); }
       updateParticles(dt);
-      if (player.hp <= 0 || enemy.hp <= 0) endRound();
+      if (state === "fight" && (player.hp <= 0 || enemy.hp <= 0)) endRound();
+      else if (state === "practice") updatePracticeHud();
     } else if (state === "over") {
       updatePlayer(dt);
       updateEnemy(dt);
@@ -2739,11 +3386,11 @@
      ============================================================ */
   /* ---- dance-move callout: names the move as you throw it ---- */
   var moveNameEl = null, moveNameTimer = 0;
-  function showMoveName(name, onBeat) {
+  function showMoveName(name, grade) {
     if (!moveNameEl) moveNameEl = document.getElementById("moveName");
     if (!moveNameEl) return;
     moveNameEl.textContent = name;
-    moveNameEl.className = onBeat ? "show onbeat" : "show";
+    moveNameEl.className = grade === "perfect" ? "show onbeat" : (grade === "great" ? "show great" : "show");
     clearTimeout(moveNameTimer);
     moveNameTimer = setTimeout(function () { moveNameEl.className = ""; }, 850);
   }
@@ -2774,13 +3421,14 @@
   }
 
   Array.prototype.forEach.call(document.querySelectorAll(".tbtn"), function (btn) {
-    var key = btn.getAttribute("data-k");
-    var release = function () { btn.classList.remove("down"); releaseKey(key); };
+    var action = btn.getAttribute("data-a") || "";
+    function keyOf() { return km(action); }
+    var release = function () { btn.classList.remove("down"); releaseKey(keyOf()); };
     btn.addEventListener("pointerdown", function (e) {
       e.preventDefault();
       if (btn.setPointerCapture) { try { btn.setPointerCapture(e.pointerId); } catch (err) {} }
       btn.classList.add("down");
-      pressKey(key);
+      pressKey(keyOf(), eventAudioTime(e));
     });
     btn.addEventListener("pointerup", release);
     btn.addEventListener("pointercancel", release);
@@ -2804,6 +3452,235 @@
   window.addEventListener("orientationchange", function () { setTimeout(checkOrientation, 150); });
   window.addEventListener("resize", checkOrientation);
   checkOrientation();
+
+  /* ---- feedback, pause, rehearsal, timing report ---- */
+  function buzz(pattern) {
+    if (!settings.haptics || !navigator.vibrate) return;
+    try { navigator.vibrate(pattern); } catch (e) {}
+  }
+  function announce(msg) {
+    var el = document.getElementById("live");
+    if (el) el.textContent = msg;
+  }
+
+  // The drop: eight seconds of a rival that presses harder. The music changing
+  // section should change the fight, not just the lighting.
+  function onDrop() {
+    if (dropFired) return;
+    dropFired = true;
+    rivalSurgeUntil = T + 8;
+    beat.pulse = 1;
+    if (player) player.meter = Math.min(100, player.meter + 12);
+    flashScreen = Math.max(flashScreen, (settings.flash === "safe" || reduceMotion) ? 0.12 : 0.3);
+    toast("THE DROP \u2014 the rival presses");
+    announce("The drop. The rival attacks faster for eight seconds.");
+    buzz([10, 40, 10]);
+  }
+
+  // The end-of-round timing report: a histogram of signed offsets, a median, and
+  // a one-tap fix. A player who rushes every hit by 20 ms finally gets told so.
+  function renderTimingReport() {
+    var wrap = document.getElementById("histo");
+    var note = document.getElementById("timingNote");
+    var btn = document.getElementById("nudgeBtn");
+    if (!wrap || !note) return;
+    wrap.innerHTML = "";
+    if (!hitOffsets.length) {
+      note.textContent = "No landed hits to measure \u2014 throw some moves on the beat.";
+      if (btn) btn.style.display = "none";
+      return;
+    }
+    var B = 21, span = 400, i, buckets = [], maxB = 1;
+    for (i = 0; i < B; i++) buckets.push(0);
+    for (i = 0; i < hitOffsets.length; i++) {
+      var ms = Math.max(-span / 2, Math.min(span / 2 - 1, hitOffsets[i]));
+      var bi = Math.max(0, Math.min(B - 1, Math.floor((ms + span / 2) / (span / B))));
+      buckets[bi]++;
+      if (buckets[bi] > maxB) maxB = buckets[bi];
+    }
+    for (i = 0; i < B; i++) {
+      var bar = document.createElement("i");
+      bar.style.height = Math.round(6 + 94 * (buckets[i] / maxB)) + "%";
+      if (i === 9 || i === 10) bar.className = "near";
+      bar.title = Math.round((i + 0.5) * span / B - span / 2) + " ms";
+      wrap.appendChild(bar);
+    }
+    var med = Math.round(medianOf(hitOffsets));
+    var early = 0;
+    for (i = 0; i < hitOffsets.length; i++) if (hitOffsets[i] < 0) early++;
+    var late = hitOffsets.length - early;
+    var where = med > 8 ? "you land late" : (med < -8 ? "you land early" : "you are centred");
+    note.innerHTML = "Median <b>" + (med > 0 ? "+" : "") + med + " ms</b> \u00b7 " +
+      hitOffsets.length + " hits \u00b7 " + early + " early, " + late + " late \u00b7 " + where +
+      (Math.abs(med) > 8 ? " \u2014 the window wants <b>" + (settings.offsetMs + med > 0 ? "+" : "") + (settings.offsetMs + med) + " ms</b>" : "");
+    if (btn) {
+      btn.style.display = Math.abs(med) > 8 ? "" : "none";
+      btn.textContent = "Apply " + (med > 0 ? "+" : "") + med + " ms";
+      btn.setAttribute("data-med", String(med));
+    }
+  }
+
+  function updatePracticeHud() {
+    var el = document.getElementById("practiceHud");
+    if (!el) return;
+    var med = hitOffsets.length ? Math.round(medianOf(hitOffsets)) : 0;
+    el.textContent = "PRACTICE \u00b7 " + practiceHits + " hits \u00b7 median " +
+      (hitOffsets.length ? ((med > 0 ? "+" : "") + med + " ms") : "\u2014") +
+      " \u00b7 " + Math.round(playRate * 100) + "%" + (muted ? " \u00b7 muted" : "");
+  }
+
+  /* ---- pause and quit
+     P used to only drop the music, so the fight carried on behind a silent
+     screen. Now the clock, the playhead and the rival all stop, and the offset
+     can be moved while it is stopped \u2014 which is when you notice you need it. */
+  function syncPauseUI() {
+    var r = document.getElementById("pauseRange"), v = document.getElementById("pauseVal");
+    if (r) r.value = settings.offsetMs;
+    if (v) v.textContent = (settings.offsetMs > 0 ? "+" : "") + settings.offsetMs + " ms";
+  }
+  function pauseRound() {
+    if (paused) return;
+    if (state !== "fight" && state !== "practice") return;
+    paused = true;
+    // The clock stops, so a key held or tapped at the moment of pausing would
+    // otherwise still be queued when the music comes back.
+    keys = {}; tap = {}; tapAt = {};
+    document.body.classList.add("paused");
+    var sheet = document.getElementById("pauseSheet");
+    if (sheet) sheet.classList.add("on");
+    syncPauseUI();
+    if (actx && actx.state === "running") { try { actx.suspend().catch(function () {}); } catch (e) {} }
+  }
+  function resumeRound() {
+    if (!paused) return;
+    paused = false;
+    keys = {}; tap = {}; tapAt = {};
+    document.body.classList.remove("paused");
+    var sheet = document.getElementById("pauseSheet");
+    if (sheet) sheet.classList.remove("on");
+    if (actx && actx.state === "suspended") { try { actx.resume().catch(function () {}); } catch (e) {} }
+    lastT = performance.now();
+  }
+  function togglePause() { if (paused) resumeRound(); else pauseRound(); }
+
+  // Leaving the arena means leaving all of it: the pause sheet, the rehearsal
+  // loop and the slowed rate are one state, so they are cleared here rather than
+  // by each caller remembering its own subset.
+  function leaveRoundMode() {
+    loopOn = false; playRate = 1; paused = false; dropFired = false;
+    var ph = document.getElementById("practiceHud");
+    if (ph) ph.classList.remove("on");
+    document.body.classList.remove("paused");
+    var sheet = document.getElementById("pauseSheet");
+    if (sheet) sheet.classList.remove("on");
+  }
+  function quitRound() {
+    var wasPractice = state === "practice";
+    leaveRoundMode();
+    stopBuffer();
+    state = "menu";
+    document.getElementById("endScreen").classList.add("hidden");
+    document.getElementById("startScreen").classList.remove("hidden");
+    updateMuteBtn();
+    if (wasPractice) toast("Rehearsal done.");
+  }
+
+  /* ---- rehearsal: a loop of real bars, optionally slowed down ----
+     You cannot practise the bar you keep missing if the only way to hear it is
+     to play the whole song from the top. Slowing the buffer down is a
+     playbackRate change, so the pitch stays put and the grid just moves slower. */
+  var practiceRate = 1;
+  function startPractice() {
+    if (!audioBuf) { toast("Load a track first \u2014 rehearsal needs a real buffer."); return; }
+    var sel = document.getElementById("loopBars");
+    var bars = sel ? (parseInt(sel.value, 10) || 4) : 4;
+    var rate = Math.max(0.4, Math.min(1, practiceRate || 1));
+    var period = beatGrid ? periodAt(0) : 0.5;
+    var first = beatGrid ? Math.max(introSkip, 0) : 0;
+    if (beatGrid) {
+      var b0 = beatPhaseAt(first, false);
+      first = first + (Math.ceil(b0) - b0) * period;   // land on a real beat
+    }
+    var from = Math.max(0, Math.min(first, audioBuf.duration - 0.3));
+    var to = Math.min(audioBuf.duration - 0.05, from + period * 4 * bars);
+    // Checked before anything is torn down: a track too short to loop has to
+    // leave the start screen exactly as it found it.
+    if (to - from < 0.4) { toast("That track is too short to loop."); return; }
+    loopFrom = from; loopTo = to;
+    unlockAudio().then(function () {
+      leaveRoundMode();
+      resetFight();
+      state = "practice";
+      enemy.x = ARENA.hi - 10;
+      enemy.hp = enemy.maxHp;
+      playRate = rate;
+      loopOn = true;
+      document.getElementById("startScreen").classList.add("hidden");
+      var ph = document.getElementById("practiceHud");
+      if (ph) ph.classList.add("on");
+      playBuffer();
+      updateMuteBtn();
+      toast("Rehearsing " + bars + " bars at " + Math.round(rate * 100) + "% \u2014 P pauses, Esc leaves.");
+    });
+  }
+
+  // Half/double time: the single most common way a grid locks to the right pulse
+  // at the wrong level. One tap fixes the whole feel of a track.
+  function retimeGrid(factor) {
+    if (!beatGrid) { toast("Load a track or a groove first."); return; }
+    var period = Math.max(0.15, Math.min(1.4, beatGrid.period * factor));
+    beatGrid = { period: period, phase: beatGrid.phase, bpm: Math.round(60 / period),
+                 intro: beatGrid.intro, q: null };
+    lastHudBpm = -1; lastBeatIdx = -9999;
+    toast("Grid \u00d7" + factor + " \u2192 " + beatGrid.bpm + " BPM");
+  }
+
+  function renderLastTrack() {
+    var row = document.getElementById("lastRow"), note = document.getElementById("lastNote");
+    if (!row) return;
+    var has = !!(lastTrack && lastTrack.key);
+    row.style.display = has ? "" : "none";
+    if (note) note.textContent = has ? (lastTrack.name || "") : "";
+  }
+
+  /* ---- key rebinding ----
+     J/K/L is a US-layout assumption, and a one-handed player needs a different
+     set entirely. Tap a key, press the replacement, done. */
+  function keyLabel(k) { return k === " " ? "SPACE" : String(k).toUpperCase(); }
+  function renderKeyMap() {
+    var wrap = document.getElementById("keyMap");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    // [action, what to call it] — the action is the key into settings.map and
+    // the label is only for the button, so the two must not be swapped.
+    var order = [["left", "left"], ["right", "right"], ["up", "up"], ["down", "down"],
+                 ["jab", "jab"], ["kick", "kick"], ["upper", "upper"], ["fin", "finish"]];
+    order.forEach(function (pair) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = pair[1] + " " + keyLabel(km(pair[0]));
+      if (armAction === pair[0]) b.className = "arm";
+      b.addEventListener("click", function () {
+        armAction = pair[0];
+        renderKeyMap();
+        var a = document.getElementById("keyArm");
+        if (a) a.textContent = "press the new key for " + pair[1];
+      });
+      wrap.appendChild(b);
+    });
+  }
+  function assignKey(k, ev) {
+    if (!armAction) return;
+    if (ev) ev.preventDefault();
+    if (k === "escape") { armAction = null; renderKeyMap(); return; }
+    settings.map[armAction] = k;
+    saveStore(SET_KEY, settings);
+    var a = document.getElementById("keyArm");
+    if (a) a.textContent = "tap a key, then press its replacement";
+    armAction = null;
+    renderKeyMap();
+    toast("Bound to " + keyLabel(k));
+  }
 
   /* ---- setup controls: difficulty, offset, cue, practice groove ---- */
   function renderBest() {
@@ -2840,6 +3717,21 @@
     if (cb) cb.textContent = settings.cue ? "On" : "Off";
     var sb = document.getElementById("synthBpm");
     if (sb) sb.value = String(settings.bpm);
+    var jseg = document.getElementById("judgeSeg");
+    if (jseg) Array.prototype.forEach.call(jseg.children, function (b) {
+      b.classList.toggle("on", b.getAttribute("data-j") === settings.judge);
+    });
+    var fseg = document.getElementById("flashSeg");
+    if (fseg) Array.prototype.forEach.call(fseg.children, function (b) {
+      b.classList.toggle("on", b.getAttribute("data-f") === settings.flash);
+    });
+    var rseg = document.getElementById("rateSeg");
+    if (rseg) Array.prototype.forEach.call(rseg.children, function (b) {
+      b.classList.toggle("on", parseFloat(b.getAttribute("data-r")) === practiceRate);
+    });
+    syncPauseUI();
+    renderKeyMap();
+    renderLastTrack();
     syncSynthLabel();
   }
 
@@ -2867,8 +3759,11 @@
   function seedLatency() {
     if (latencySeeded || !storeFresh || !actx) return;
     latencySeeded = true;
-    var secs = (typeof actx.outputLatency === "number" && actx.outputLatency > 0)
-      ? actx.outputLatency : (actx.baseLatency || 0);
+    // Both numbers matter: baseLatency is the graph's own delay, outputLatency
+    // is the device's. Adding them is the honest estimate of when a sound that
+    // was scheduled at t is actually heard.
+    var secs = (typeof actx.baseLatency === "number" ? actx.baseLatency : 0) +
+               (typeof actx.outputLatency === "number" ? actx.outputLatency : 0);
     var ms = Math.round(secs * 1000 / 5) * 5;
     if (ms < 10 || ms > 200) return;   // nothing worth seeding, or past the clamp
     applyOffset(ms);
@@ -2923,6 +3818,70 @@
     saveStore(SET_KEY, settings);
     syncTuneUI();
     if (settings.cue) flashBeatCue();
+  });
+
+  var judgeSegEl = document.getElementById("judgeSeg");
+  if (judgeSegEl) judgeSegEl.addEventListener("click", function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest("button[data-j]") : null;
+    if (!b) return;
+    settings.judge = b.getAttribute("data-j");
+    saveStore(SET_KEY, settings);
+    syncTuneUI();
+    toast(settings.judge === "strict" ? "Strict window \u2014 60% as forgiving" : "Normal judgement window");
+  });
+
+  var flashSegEl = document.getElementById("flashSeg");
+  if (flashSegEl) flashSegEl.addEventListener("click", function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest("button[data-f]") : null;
+    if (!b) return;
+    settings.flash = b.getAttribute("data-f");
+    saveStore(SET_KEY, settings);
+    syncTuneUI();
+    toast(settings.flash === "safe" ? "Flashes limited \u2014 no full-screen strobe" : "Full flashes on");
+  });
+
+  var rateSegEl = document.getElementById("rateSeg");
+  if (rateSegEl) rateSegEl.addEventListener("click", function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest("button[data-r]") : null;
+    if (!b) return;
+    practiceRate = parseFloat(b.getAttribute("data-r")) || 1;
+    syncTuneUI();
+    if (state === "practice") startPractice();
+  });
+
+  var halfBtnEl = document.getElementById("halfBtn");
+  if (halfBtnEl) halfBtnEl.addEventListener("click", function () { retimeGrid(2); });
+  var doubleBtnEl = document.getElementById("doubleBtn");
+  if (doubleBtnEl) doubleBtnEl.addEventListener("click", function () { retimeGrid(0.5); });
+
+  var rehearseEl = document.getElementById("rehearseBtn");
+  if (rehearseEl) rehearseEl.addEventListener("click", startPractice);
+
+  var lastBtnEl = document.getElementById("lastBtn");
+  if (lastBtnEl) lastBtnEl.addEventListener("click", function () {
+    if (!lastTrack || !lastTrack.key) return;
+    toast("Fetching \"" + lastTrack.name + "\"\u2026");
+    idbGet(lastTrack.key).then(function (raw) {
+      if (!raw) { toast("That file is no longer stored \u2014 pick it again."); return; }
+      try { loadTrack(new File([raw], lastTrack.name)); }
+      catch (e) { toast("This browser will not rebuild the file \u2014 pick it again."); }
+    });
+  });
+
+  var resumeEl = document.getElementById("resumeBtn");
+  if (resumeEl) resumeEl.addEventListener("click", resumeRound);
+  var quitEl = document.getElementById("quitBtn");
+  if (quitEl) quitEl.addEventListener("click", quitRound);
+  var pauseRangeEl = document.getElementById("pauseRange");
+  if (pauseRangeEl) pauseRangeEl.addEventListener("input", function () {
+    applyOffset(parseInt(pauseRangeEl.value, 10) || 0);
+  });
+  var nudgeEl = document.getElementById("nudgeBtn");
+  if (nudgeEl) nudgeEl.addEventListener("click", function () {
+    var med = parseInt(nudgeEl.getAttribute("data-med"), 10) || 0;
+    applyOffset(settings.offsetMs + med);
+    toast("Offset " + (settings.offsetMs > 0 ? "+" : "") + settings.offsetMs + " ms \u2014 from your own hits");
+    renderTimingReport();
   });
 
   var synthBpmEl = document.getElementById("synthBpm");
@@ -3022,7 +3981,7 @@
      cleared site data by hand. Bump APP_VER with every shipped change. A page
      that was already controlled reloads once when the new worker takes over,
      so the fresh shell is the one on screen. */
-  var APP_VER = "1.1.0-unreleased";
+  var APP_VER = "1.2.0-unreleased";
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     var hadController = !!navigator.serviceWorker.controller;
     var reloading = false;
@@ -3066,6 +4025,8 @@
     beat.phase = 0; beat.last = -99; beat.pulse = 0; beat.bpm = 0;
     beat.intervals = []; beat.prevBeat = undefined;
     lastBeatIdx = -9999;
+    // A real fight is always 1x and never a loop: leave rehearsal behind.
+    leaveRoundMode();
     document.getElementById("startScreen").classList.add("hidden");
     calibTaps = [];
     // Unlock first, then start playback. Never assume the context is running.
@@ -3093,6 +4054,7 @@
   document.getElementById("againBtn").addEventListener("click", function () {
     resetFight();
     fightStart = T;
+    leaveRoundMode();
     calibTaps = [];
     unlockAudio().then(function () {
       if (audioBuf && !playing) playBuffer();

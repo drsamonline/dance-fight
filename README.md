@@ -89,6 +89,12 @@ with no connection, and `manifest.webmanifest` gives it a name and an icon.
 - **One file, zero dependencies.** No framework, no bundler, no CDN.
 - **Built for the room you're in.** A click of latency calibration, a rival that telegraphs what
   it is about to do, three difficulty settings, and a visual beat pulse for playing muted.
+- **A timing report, not a guess.** Every landed hit is measured against the grid; the end screen draws
+  where they landed, says whether you rush or drag, and can move the offset for you.
+- **The song's structure is in the fight.** The first sustained lift in a track is detected up front and
+  the rival presses through it. A tempo that drifts gets a tempo map instead of one wrong average.
+- **Practice the bar you keep missing.** Loop four or eight bars from the first beat, at 0.75× or 0.5×
+  with the pitch intact; the judgement window follows the rate.
 
 ---
 
@@ -105,12 +111,21 @@ Pick an audio file (or just press Start and it plays a default 128 BPM groove).
 | `K` | **Spinning Kick** | Medium — a full 360° turn |
 | `L` | **Body-Roll Uppercut** | Heavy — rolls through a full turn |
 | `SPACE` | **Body-Roll Finisher** | Needs a full meter — a 720° spin |
-| `P` | Pause / resume music | |
+| `P` | Pause / resume | Stops the clock, the music and the rival; the offset is live in the sheet |
 | `R` | Re-lock the tempo | Re-listens to the next few bars and re-fits the beat grid |
+| `ESC` | Leave rehearsal | Back to setup |
+
+Every key can be rebound from **Keys** on the start screen — the defaults assume a US layout.
 
 **Land moves on the beat.** A move thrown within ~80 ms of a beat lands as a PERFECT: 1.6× damage and a
 bigger combo multiplier. That 80 ms is real time, so it feels the same on a 90 BPM track as on a 170 BPM
-one instead of widening and shrinking with the tempo. The gold `· ON BEAT` tag on the move name tells you when you nailed it.
+one instead of widening and shrinking with the tempo. The gold `· ON BEAT` tag on the move name tells you when
+you nailed it. Between there and ~2.2× the window is a **GREAT** (cyan `· CLOSE`): 1.15× and still combo.
+**Strict** on the start screen halves both windows.
+
+The judgement uses the instant the key went down, not the frame that noticed it, so a slow device does not
+quietly steal a fifth of the window. At the end of a round the timing report shows every hit as a bar
+around the beat, names whether you lean early or late, and offers to move the offset by your own median.
 
 **On a phone:** on-screen controls appear automatically. Hold a direction with one thumb and tap attacks
 with the other. Landscape fits the whole arena; portrait crops the empty sides and frames the two dancers
@@ -165,12 +180,14 @@ drawn from the same joint angles the canvas uses. Regenerate it whenever a move 
 
 ## Checks
 
-Four dependency-free gates run against the same single file:
+Six dependency-free gates run against the same single file:
 
 ```bash
 node tools/rig-check.mjs      # skeleton invariants: bone lengths, finite joints, spin direction, stage bounds
-node tools/calib-check.mjs    # calibration maths: the offset window, the median, the clamp, the mute path
-node tools/beat-check.mjs     # beat analysis against synthetic tracks: tempo, phase, intros, refusals
+node tools/calib-check.mjs    # judgement and calibration: window, grades, strict, half-speed, median, clamp
+node tools/beat-check.mjs     # beat analysis on synthetic tracks: tempo, phase, intros, drift, drop, refusals
+node tools/fight-check.mjs    # combat maths and a simulated round: damage, combo cap, difficulty, pacing
+node tools/ver-check.mjs      # APP_VER matches the changelog and the worker's cache really is versioned
 python3 tools/contrast.py     # WCAG ratios for every ink/surface pair the theme block paints
 ```
 
@@ -208,18 +225,23 @@ Being straight about what this is and isn't:
 - **Autoplay.** Browsers block audio until you interact with the page, so the first tap or click unlocks
   sound. If you ever hear nothing, a **live level meter** under the BPM readout shows whether audio is
   actually flowing — and a banner appears if it isn't. That meter reads real signal, not a flag.
-- **Tempo lock starts at load.** The grid is fitted to the first two minutes. A silent lead-in — a
-  count-in, a fade-up, an empty bar — is measured and skipped, and the drop zone reports where the first
-  beat is. A track that opens with a beatless ambient intro, or one that drifts tempo, is the case for
-  `R` (or **RE-LOCK** in the corner): it re-analyses the next few bars and re-fits the grid from the
-  playhead without restarting the track. If no clear pulse is found at all it falls back to a steady
-  128 BPM.
+- **Tempo lock starts at load.** The grid is fitted to the whole track (capped at ten minutes). A silent
+  lead-in — a count-in, a fade-up, an empty bar — is measured and skipped, and the drop zone reports where
+  the first beat is. A steady tempo keeps one grid; a track that ramps is fitted with a tempo map, and one
+  that steps tempo mid-song is the case for `R` (or **RE-LOCK** in the corner), which re-analyses the next
+  few bars and re-fits the grid from the playhead without restarting. If no clear pulse is found at all it
+  falls back to a steady 128 BPM.
+- **One drop, not a song map.** The section detector finds the first sustained lift and leaves it at that;
+  it does not label every verse and chorus, and a track that is loud from bar one reports no drop at all.
+- **Rehearsal is a fixed loop.** Four or eight bars from the first beat, at 1×, 0.75× or 0.5× — there is no
+  scrub bar, so choosing a section further in still means re-locking by ear.
 - **Portrait is cropped, not re-laid-out.** Phone portrait zooms into the middle 480 units of the arena so
   the dancers are legible, which means the outer thirds of the stage are off-screen. Landscape shows all
   of it.
-- **Analysis blocks for a moment.** It is chunked so the progress bar moves and the tab stays responsive
-  between stages, but the heavy stages still run on the main thread — a very long file can hitch for a
-  fraction of a second per stage.
+- **Analysis runs off-thread, with one caveat.** The DSP runs in a worker built from the same function, but
+  the samples are copied into a mono mixdown first — a few tens of milliseconds on a long file, not the
+  seconds the analysis itself can take. A browser that refuses the worker (or a file opening from `file://`
+  where blobs are restricted) falls back to the main thread and can hitch per stage.
 - **Feel is unverified at 60fps.** The geometry, timing and beat grid were verified programmatically, but
   I could only test in a headless browser rendering a few frames per second. How the spins and trails feel
   in motion is the part you're the judge of.

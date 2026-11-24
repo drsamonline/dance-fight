@@ -61,7 +61,11 @@ ok("the judgement window constants are declared", windowConsts !== "", windowCon
 
 let src;
 try {
-  src = ["isOnBeat", "beatWindow", "beatFractionNow", "medianOf", "applyOffset", "tapCalibrate"].map(extract).join("\n");
+  // The judgement chain: isOnBeat -> gradeAt -> beatPhaseAt/periodAt/judgeWindow.
+  // Each link is lifted from the page, so a change to the grading tiers is
+  // exercised here instead of only being felt in play.
+  src = ["isOnBeat", "gradeAt", "beatPhaseAt", "periodAt", "judgeWindow", "beatWindow",
+         "beatFractionNow", "medianOf", "applyOffset", "tapCalibrate"].map(extract).join("\n");
 } catch (err) {
   ok("the calibration functions are present in " + file, false, String(err));
   summary();
@@ -89,7 +93,11 @@ const factory = new Function(
   var beatGrid = beatGridRef.current;
   var SET_KEY = "k";
   var calibTaps = [];
+  var playRate = 1;
   function playbackPos() { return clock.pos(); }
+  // A press timestamped in the past must be judged at that timestamp, so the
+  // fake buffer position simply is the audio time the test hands in.
+  function bufferPosition(atSec) { return (typeof atSec === "number") ? atSec : clock.pos(); }
   function currentBPM() { return 128; }
   function saveStore() { clock.save(); }
   function syncTuneUI() {}
@@ -100,6 +108,10 @@ const factory = new Function(
   ${src}
   return {
     onBeat: isOnBeat, frac: beatFractionNow, tap: tapCalibrate,
+    grade: function (ms) { return gradeAt(ms / 1000); },
+    // 0.5x rehearsal: the buffer moves half as fast, so an 80 ms real window is
+    // 40 ms of buffer time.
+    setRate: function (r) { playRate = r; },
     setPeriod: function (p) { beatGrid.period = p; },
     get taps() { return calibTaps; }, reset: function () { calibTaps = []; }
   };
@@ -201,5 +213,45 @@ ok("128 BPM: 150 ms late is OFF beat", !onBeat(150));
 let toggle = "";
 try { toggle = extract("toggleMusic"); } catch (err) { toggle = ""; }
 ok("muting keeps the audio clock running (no stopBuffer / stopSynth)", toggle !== "" && !/stop(Buffer|Synth)\(/.test(toggle), toggle ? "toggleMusic still stops playback" : "toggleMusic is missing");
+
+/* ---- 11. three grades, not two --------------------------------------------
+   A hit 120 ms out is not the same as one 250 ms out. GREAT is a real tier that
+   pays less than PERFECT and still builds the combo, so a near miss is legible. */
+reset();
+g.setPeriod(0.46875);
+g.setRate(1);
+ok("0 ms grades PERFECT", g.grade(0).grade === "perfect", g.grade(0).grade);
+ok("60 ms grades PERFECT", g.grade(60).grade === "perfect", g.grade(60).grade);
+ok("120 ms grades GREAT, not PERFECT", g.grade(120).grade === "great", g.grade(120).grade);
+ok("150 ms early grades GREAT", g.grade(-150).grade === "great", g.grade(-150).grade);
+ok("260 ms grades OFF", g.grade(260).grade === "off", g.grade(260).grade);
+ok("a GREAT reports its signed offset in real ms", Math.round(g.grade(120).ms) === 120, String(g.grade(120).ms));
+
+/* ---- 12. strict halves the window ----------------------------------------- */
+reset();
+settings.judge = "strict";
+ok("strict: 40 ms is still PERFECT", g.grade(40).grade === "perfect", g.grade(40).grade);
+ok("strict: 60 ms is demoted to GREAT", g.grade(60).grade === "great", g.grade(60).grade);
+ok("strict: the on-beat boolean follows the tier", (setMs(60), g.onBeat()) === false);
+settings.judge = "normal";
+
+/* ---- 13. rehearsal at half speed is not easier -----------------------------
+   80 ms of what the player heard is 40 ms of buffer time at 0.5x, so the window
+   in buffer time must shrink with the rate; otherwise slowing a track down would
+   secretly double the forgiveness and the practice would not transfer. */
+reset();
+g.setRate(0.5);
+ok("0.5x: 40 ms of buffer time (80 ms heard) is PERFECT", g.grade(40).grade === "perfect", g.grade(40).grade);
+ok("0.5x: 60 ms of buffer time (120 ms heard) is GREAT", g.grade(60).grade === "great", g.grade(60).grade);
+ok("0.5x: the reported offset is in heard time", Math.abs(g.grade(40).ms - 80) < 1, String(g.grade(40).ms));
+g.setRate(1);
+
+/* ---- 14. a press timestamped in the past is judged where it happened ------
+   The frame loop used to be the judge, so at 30 fps a tap could be measured up to
+   16 ms from where it actually landed. isOnBeat(atSec) reads the press instant. */
+reset();
+g.setPeriod(0.46875);
+ok("a stamp 60 ms before the beat grades PERFECT", g.grade(-60).grade === "perfect", g.grade(-60).grade);
+ok("the same instant judged a frame later would not move the grade", g.grade(-60).grade === g.grade(-60).grade);
 
 summary();
