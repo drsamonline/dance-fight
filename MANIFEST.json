@@ -21,16 +21,16 @@
       "at": "2026-11-25T08:36:31Z"
     },
     ".github/workflows/build-apps.yml": {
-      "sha": "65d8211f28b9bb0492a0bdc9831c013ab6bc6621",
+      "sha": "3bc8b0659673721c1d9fc4a470fd6c935a82802e",
       "producer": "audit-2026-11-10",
       "class": "canonical",
-      "at": "2026-11-10T15:12:04Z"
+      "at": "2026-11-25T08:50:57Z"
     },
     "CHANGELOG.md": {
-      "sha": "ef4f74a3fd41077883583f351dab42139c94629f",
+      "sha": "408e130298b3f251f7906c8d86827736b69073c2",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-24T02:13:58Z"
+      "at": "2026-11-25T08:50:57Z"
     },
     "tools/contrast.py": {
       "sha": "72724051ccdfadd4fd67e28bcb7b9e76bee4d515",
@@ -105,17 +105,17 @@
       "at": "2026-11-23T12:55:18Z"
     },
     "tools/frame-strip.mjs": {
-      "sha": "887eb1ef52dbcbbe08150e3e8cfdfa1a96c6a291",
+      "sha": "f4bf22cbceacd965ffbd04c7d8d2a02348386d48",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-24T07:46:52Z"
+      "at": "2026-11-25T08:50:57Z"
     },
     "docs/assets/moves.svg": {
-      "sha": "9879479d30d5e7fc48ff4d38e03f68aebfdb9e4c",
+      "sha": "000ab0545ab9a4b5848becd56759416c47d0d026",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-24T07:46:52Z"
+      "at": "2026-11-25T08:50:57Z"
     }
   },
-  "updated": "2026-11-25T08:36:31Z"
+  "updated": "2026-11-25T08:50:57Z"
 }
