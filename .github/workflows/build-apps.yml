@@ -10,9 +10,11 @@
 # recreating it, so a failed build destroyed the release. Do not inline it again.
 #
 # What it does on every push to main:
-#   build the portable EXE and the signed APK -> publish the rolling `app-latest`
-#   release -> deploy the demo to Pages. All three come from the same commit, so
-#   the live demo and the released build can never disagree.
+#   check MANIFEST.json provenance -> build the portable EXE and the signed APK ->
+#   publish the rolling `app-latest` release -> deploy the demo to Pages. All
+#   three come from the same commit, so the live demo and the released build can
+#   never disagree. The manifest gate runs first and stops the build when a
+#   recorded blob no longer matches the commit.
 #
 # Pull requests build (and are therefore checked) but never release or deploy.
 
@@ -35,7 +37,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  manifest:
+    # MANIFEST.json records a blob sha per file. Commits and generators kept
+    # forgetting to re-record it, and the protected classes hid the drift, so
+    # every release is gated on the manifest matching the checkout.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: MANIFEST.json matches the checkout
+        run: python3 tools/manifest-gate.py
+
   app:
+    needs: manifest
     uses: drsamonline/app-builder/.github/workflows/build.yml@85949b5b7ef6a47a40731cc01e8c2cd65ceeda4c   # was @main
     with:
       app_name: dance-fight

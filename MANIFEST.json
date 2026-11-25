@@ -21,10 +21,10 @@
       "at": "2026-11-25T08:36:31Z"
     },
     ".github/workflows/build-apps.yml": {
-      "sha": "3bc8b0659673721c1d9fc4a470fd6c935a82802e",
-      "producer": "audit-2026-11-10",
+      "sha": "49d288dc2011b55ef2b3aa7e564a18143ad4aadb",
+      "producer": "agent",
       "class": "canonical",
-      "at": "2026-11-25T08:50:57Z"
+      "at": "2026-11-25T09:08:08Z"
     },
     "CHANGELOG.md": {
       "sha": "408e130298b3f251f7906c8d86827736b69073c2",
@@ -115,7 +115,13 @@
       "producer": "agent",
       "class": "agent",
       "at": "2026-11-25T08:50:57Z"
+    },
+    "tools/manifest-gate.py": {
+      "sha": "4b7651e3e0abc8927d42c2af059d8dc937706e88",
+      "producer": "agent",
+      "class": "agent",
+      "at": "2026-11-25T09:08:08Z"
     }
   },
-  "updated": "2026-11-25T08:50:57Z"
+  "updated": "2026-11-25T09:08:08Z"
 }
