@@ -1921,7 +1921,7 @@
     shoe: "#26100a"
   };
   var player, enemy;
-  var state = "menu"; // menu | fight | over
+  var state = "menu"; // menu | fight | over | practice
   var particles = [], popups = [], rings = [], shake = 0, flashScreen = 0, hitStop = 0;
   var score = 0, bestCombo = 0, perfectHits = 0, greatHits = 0, roundEnded = false;
   // Every landed attack's signed distance from the beat, so the end screen can
@@ -3144,7 +3144,7 @@
 
     drawBackground();
 
-    if (state === "fight" || state === "over") {
+    if (state === "fight" || state === "over" || state === "practice") {
       var pPose = resolvePose(player);
       var ePose = resolvePose(enemy);
       pushHist(player, pPose);
