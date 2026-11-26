@@ -231,21 +231,33 @@ def cmd_record(paths: list[str], producer: str, cls: str | None, force: bool) ->
     return rc
 
 
-def cmd_claim(path: str, cls: str) -> int:
+def cmd_claim(path: str, cls: str, force: bool) -> int:
     if cls not in {"hand", "agent", "canonical", "generated"}:
         raise SystemExit(f"unknown class {cls}")
     if not (repo_root() / path).exists():
         raise SystemExit(f"refuse: {path} does not exist — cannot claim a missing file")
     d = load()
-    entry = d["files"].get(path, {})
+    entry = dict(d["files"].get(path, {}))
     entry["class"] = cls
-    entry["sha"] = sha_worktree(path)
+    disk = sha_worktree(path)
+    entry["sha"] = disk
     # A hand/agent claim means a human owns it now — do not leave a bot's producer
     # string on it, or a reader cannot tell who took it over.
     if cls in {"hand", "agent"}:
         entry["producer"] = "human"
     else:
         entry.setdefault("producer", "human")
+    # claim() reclassifies, so it can split the provenance of a byte-identical twin
+    # just as record() can; the same guard applies, or claiming a copy would be a
+    # way around the record-time refusal.
+    conflicts = twin_conflicts(d, path, disk, cls, entry["producer"])
+    if conflicts and not force:
+        other, other_entry = conflicts[0]
+        print(f"refuse {path}: byte-identical to {other} "
+              f"({other_entry.get('class', 'generated')}/{other_entry.get('producer', '<none>')}) "
+              f"but this claim would make it {cls}/{entry['producer']} "
+              f"(use --force to override)", file=sys.stderr)
+        return RC_DRIFT
     entry["at"] = now()
     d["files"][path] = entry
     save(d)
@@ -300,10 +312,12 @@ def main(argv=None) -> int:
     p.add_argument("--class", dest="cls", default=None,
                    choices=["generated", "canonical", "hand", "agent"])
     p.add_argument("--force", action="store_true")
-    p = sub.add_parser("claim", help="take ownership of a path as a human")
+    p = sub.add_parser("claim", help="take ownership of a path as a human "
+                                     "(refuses split provenance for identical bytes)")
     p.add_argument("path")
     p.add_argument("--as", dest="cls", required=True,
                    choices=["hand", "agent", "canonical", "generated"])
+    p.add_argument("--force", action="store_true")
     p = sub.add_parser("lock", help="lock the whole repository")
     p.add_argument("--reason", default="See LOCKED.md")
     sub.add_parser("unlock", help="unlock the repository")
@@ -312,7 +326,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if a.cmd == "check":   return cmd_check(a.paths)
     if a.cmd == "record":  return cmd_record(a.paths, a.producer, a.cls, a.force)
-    if a.cmd == "claim":   return cmd_claim(a.path, a.cls)
+    if a.cmd == "claim":   return cmd_claim(a.path, a.cls, a.force)
     if a.cmd == "lock":    return cmd_lock(a.reason)
     if a.cmd == "unlock":  return cmd_unlock()
     if a.cmd == "status":  return cmd_status()
