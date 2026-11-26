@@ -70,9 +70,9 @@
     },
     "docs/play/icon.svg": {
       "sha": "eee3a24305a845f2d0a6a25732cb4d082961cf3e",
-      "producer": "buffalo@2026-11-23",
-      "class": "agent",
-      "at": "2026-11-23T05:35:26Z"
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T14:02:18Z"
     },
     "docs/play/icon.png": {
       "sha": "fb0608bd314ddbd75971e95b0b72d66af62edc7d",
@@ -297,5 +297,5 @@
       "at": "2026-11-26T11:42:13Z"
     }
   },
-  "updated": "2026-11-26T12:19:46Z"
+  "updated": "2026-11-26T14:02:18Z"
 }
