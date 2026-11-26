@@ -117,11 +117,11 @@
       "at": "2026-11-25T08:50:57Z"
     },
     "tools/manifest-gate.py": {
-      "sha": "4b7651e3e0abc8927d42c2af059d8dc937706e88",
+      "sha": "88a783f6d1a02dda805612ee848eac1c230542b6",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-25T09:08:08Z"
+      "at": "2026-11-26T11:23:57Z"
     }
   },
-  "updated": "2026-11-25T09:08:08Z"
+  "updated": "2026-11-26T11:23:57Z"
 }
