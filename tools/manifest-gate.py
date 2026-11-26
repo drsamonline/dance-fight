@@ -12,8 +12,14 @@ every path recorded in MANIFEST.json and decides for itself:
                 new)
 
 Usage:
-    python3 tools/manifest-gate.py            # every path MANIFEST.json records
+    python3 tools/manifest-gate.py            # every tracked file
     python3 tools/manifest-gate.py <paths...> # named paths instead, to spot-check
+
+Coverage: the manifest is meant to describe every tracked file. The default run
+compares `git ls-files` against MANIFEST.json and fails on any tracked path the
+manifest does not record, so a new file cannot slip in unrecorded. The single
+exemption is MANIFEST.json itself, which is the one file no manifest can hold a
+sha for without changing that sha.
 
 Run from the repo root; exit 0 means the manifest matches the checkout. A
 malformed MANIFEST.json is reported as a one-line failure, not a traceback.
@@ -28,6 +34,9 @@ from typing import NoReturn
 MANIFEST = "MANIFEST.json"
 CHECK = "tools/manifest.py"
 PASS_STATUSES = {"clean", "protected"}
+# The manifest cannot record a sha for itself: writing the sha would change the
+# sha. Every other tracked path must be recorded, so this is the only exemption.
+EXEMPT = frozenset({MANIFEST})
 # manifest.py's own verdict codes; anything else is a hard error, not a verdict.
 VERDICT_CODES = {0, 3, 4}
 # Why a path failed, so the log says what to fix without reading manifest.py.
@@ -91,6 +100,14 @@ def run_check(root: str, paths: list[str]) -> tuple[int, list[dict]]:
     return r.returncode, rows
 
 
+def tracked_files(root: str) -> list[str]:
+    r = subprocess.run(["git", "-C", root, "ls-files", "-z"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        die(f"git ls-files failed (exit {r.returncode}): {r.stderr.strip()}")
+    return [p for p in r.stdout.split("\0") if p]
+
+
 def short(sha) -> str:
     return "none" if sha is None else str(sha)[:12]
 
@@ -98,7 +115,15 @@ def short(sha) -> str:
 def main(argv: list[str] | None = None) -> int:
     root = repo_root()
     named = list(sys.argv[1:] if argv is None else argv)
-    paths = named or manifest_paths(root)
+    if named:
+        paths = named
+    else:
+        paths = manifest_paths(root)
+        recorded = set(paths)
+        # Unrecorded tracked files are handed to check too, so they are reported
+        # as "unrecorded" in the same words as any other failure.
+        paths += [p for p in tracked_files(root)
+                  if p not in recorded and p not in EXEMPT]
     _, rows = run_check(root, paths)
 
     seen = {row.get("path") for row in rows}

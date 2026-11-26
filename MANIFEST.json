@@ -117,11 +117,185 @@
       "at": "2026-11-25T08:50:57Z"
     },
     "tools/manifest-gate.py": {
-      "sha": "88a783f6d1a02dda805612ee848eac1c230542b6",
+      "sha": "f05cc9163e65507c05130b8bf62c655d6acc10d4",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-26T11:23:57Z"
+      "at": "2026-11-26T11:42:13Z"
+    },
+    ".github/FUNDING.yml": {
+      "sha": "c9bc3bd42eff2e7c6c6d63d97d1a8c46b8083682",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    ".github/dependabot.yml": {
+      "sha": "23f0d1a00e7c457ee07dcda8cd7429adc5a36259",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "LICENSE": {
+      "sha": "295d4f7d26d1170a1e38f43c2cb47df84c046c86",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "PAGES.json": {
+      "sha": "e317f076167d15674f9775e7b685f98427a1a0a2",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "PRIVACY.md": {
+      "sha": "6b8805a1237a91354c9d06bb2f28dd3ba8ad2dbe",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "SECURITY.md": {
+      "sha": "c81466028c2f470ead6f55a89c682fa09f01e185",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "VERSION": {
+      "sha": "3eefcb9dd5b38e2c1dc061052455dd97bcd51e6c",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/.nojekyll": {
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/404.html": {
+      "sha": "bd102cd5a8c55108e22d1af7e3276ba13fb2d248",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/GUIDE.md": {
+      "sha": "1e515e705ee11ac39d246b7ab151a2a12b5d71c6",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/app-desktop.png": {
+      "sha": "96fec307d154260b19c1becf5e675cbe7d4c6308",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/app-mobile.png": {
+      "sha": "2c76eb8bd285c9948a80845361bd18dab923965e",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/badge-build.svg": {
+      "sha": "afa918116670a9146e9c0008c5664c03b9f8b894",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/badge-deps.svg": {
+      "sha": "232873f43a1fd14317f902e5ecf48892361c9c12",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/badge-licence.svg": {
+      "sha": "3d18a311d0ae1d15402da1c809bb98d51462857d",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/badge-live.svg": {
+      "sha": "1836c460d28c035498496052503c0711e26ea468",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/badge-offline.svg": {
+      "sha": "143b284c9c305ea79acf49bda2b9bcf9b5540b9b",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/badge-tests.svg": {
+      "sha": "20f2a1e65ce7dcada709936e6a480a77a8ebc0cd",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/screenshot.jpg": {
+      "sha": "a728180f4f7b7353d6a725b530d70af60952e2d7",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/support-portrait.jpg": {
+      "sha": "c2150f09a5c10d616faf049f8e516d6fffd1a269",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/assets/upi-qr.svg": {
+      "sha": "951a37f7ea9954fbabce736f3dd5aefb2dce2cb2",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/icon.png": {
+      "sha": "fb0608bd314ddbd75971e95b0b72d66af62edc7d",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/icon.svg": {
+      "sha": "eee3a24305a845f2d0a6a25732cb4d082961cf3e",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/play/screenshot.jpg": {
+      "sha": "a728180f4f7b7353d6a725b530d70af60952e2d7",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/robots.txt": {
+      "sha": "c75244273b79674c61d7cf434d414688e85df2a5",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/shot.png": {
+      "sha": "0762bc5fd24ffc0f0396bb2e022f38061858f10d",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "docs/sitemap.xml": {
+      "sha": "833ef8cc878e8dad65962cb6c6e6e455121d7c34",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "screenshot.jpg": {
+      "sha": "a728180f4f7b7353d6a725b530d70af60952e2d7",
+      "producer": "human",
+      "class": "hand",
+      "at": "2026-11-26T11:42:13Z"
+    },
+    "tools/manifest.py": {
+      "sha": "e2493507418cf44a4081961cff673e6098780267",
+      "producer": "agent",
+      "class": "agent",
+      "at": "2026-11-26T11:42:13Z"
     }
   },
-  "updated": "2026-11-26T11:23:57Z"
+  "updated": "2026-11-26T11:42:13Z"
 }
