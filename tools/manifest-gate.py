@@ -21,6 +21,10 @@ manifest does not record, so a new file cannot slip in unrecorded. The single
 exemption is MANIFEST.json itself, which is the one file no manifest can hold a
 sha for without changing that sha.
 
+Consistency: files with identical bytes must be recorded with one class and one
+producer. Otherwise copies of the same source drift apart (one hand, one agent)
+and every routine re-record of one copy needs `--force` while the other does not.
+
 Run from the repo root; exit 0 means the manifest matches the checkout. A
 malformed MANIFEST.json is reported as a one-line failure, not a traceback.
 """
@@ -62,7 +66,7 @@ def repo_root() -> str:
     return r.stdout.strip()
 
 
-def manifest_paths(root: str) -> list[str]:
+def load_manifest(root: str) -> dict:
     path = f"{root}/{MANIFEST}"
     try:
         with open(path, encoding="utf-8") as fh:
@@ -77,10 +81,9 @@ def manifest_paths(root: str) -> list[str]:
     files = data.get("files")
     if not isinstance(files, dict):
         die(f'{MANIFEST} has no "files" object')
-    paths = list(files)
-    if not paths:
+    if not files:
         die(f"{MANIFEST} records no paths")
-    return paths
+    return files
 
 
 def run_check(root: str, paths: list[str]) -> tuple[int, list[dict]]:
@@ -112,13 +115,46 @@ def short(sha) -> str:
     return "none" if sha is None else str(sha)[:12]
 
 
+def consistency_failures(files: dict, rows: list[dict]) -> list[str]:
+    """Byte-identical checked files that disagree on class or producer.
+
+    Grouping uses the worktree blob sha from `check`, so this is about the bytes
+    actually in the checkout, not just what the manifest claims. Only paths that
+    were checked take part, which keeps a named-path spot check scoped to its own
+    paths.
+    """
+    groups: dict[str, list[str]] = {}
+    for row in rows:
+        sha = row.get("worktree_sha")
+        path = row.get("path")
+        if sha and path:
+            groups.setdefault(sha, []).append(path)
+
+    failures = []
+    for sha, paths in groups.items():
+        if len(paths) < 2:
+            continue
+        paths = sorted(paths)
+        classes = {str(files.get(p, {}).get("class", "generated")) for p in paths}
+        producers = {str(files.get(p, {}).get("producer", "<none>")) for p in paths}
+        if len(classes) < 2 and len(producers) < 2:
+            continue
+        detail = ", ".join(
+            f"{p} ({files.get(p, {}).get('class', 'generated')}"
+            f"/{files.get(p, {}).get('producer', '<none>')})" for p in paths)
+        failures.append(f"byte-identical files disagree on class or producer "
+                        f"(sha {short(sha)}): {detail}")
+    return failures
+
+
 def main(argv: list[str] | None = None) -> int:
     root = repo_root()
+    files = load_manifest(root)
     named = list(sys.argv[1:] if argv is None else argv)
     if named:
         paths = named
     else:
-        paths = manifest_paths(root)
+        paths = list(files)
         recorded = set(paths)
         # Unrecorded tracked files are handed to check too, so they are reported
         # as "unrecorded" in the same words as any other failure.
@@ -151,6 +187,9 @@ def main(argv: list[str] | None = None) -> int:
                             f"(manifest={short(m)}, committed={short(c)}, "
                             f"worktree={short(w)})")
 
+    inconsistent = consistency_failures(files, rows)
+    failures += inconsistent
+
     checked = len(rows)
     if failures:
         print(f"manifest-gate: {len(failures)} problem(s) across {checked} checked path(s)",
@@ -160,6 +199,9 @@ def main(argv: list[str] | None = None) -> int:
         print("Record the current blobs with `python3 tools/manifest.py record "
               "--class <class> --producer <who> <paths>` in the same commit as the "
               "change they describe.", file=sys.stderr)
+        if inconsistent:
+            print("Byte-identical paths must share one class and producer: pick the "
+                  "honest pair and record every copy with it.", file=sys.stderr)
         return 1
 
     print(f"manifest-gate: {checked} path(s) match the checkout")

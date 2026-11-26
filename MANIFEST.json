@@ -117,10 +117,10 @@
       "at": "2026-11-25T08:50:57Z"
     },
     "tools/manifest-gate.py": {
-      "sha": "f05cc9163e65507c05130b8bf62c655d6acc10d4",
+      "sha": "e12ca20b8bd558c6811e5c3deb40e45bc1d7a8c6",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-26T11:42:13Z"
+      "at": "2026-11-26T16:16:00Z"
     },
     ".github/FUNDING.yml": {
       "sha": "c9bc3bd42eff2e7c6c6d63d97d1a8c46b8083682",
@@ -297,5 +297,5 @@
       "at": "2026-11-26T11:42:13Z"
     }
   },
-  "updated": "2026-11-26T14:02:18Z"
+  "updated": "2026-11-26T16:16:00Z"
 }
