@@ -35,6 +35,12 @@ import subprocess
 import sys
 from typing import NoReturn
 
+try:
+    # Sibling module: one shared definition of the byte-identical provenance rule.
+    from manifest import provenance, provenance_mismatch
+except Exception as exc:  # noqa: BLE001 - report as a one-line gate failure
+    sys.exit(f"manifest-gate: cannot load tools/manifest.py: {exc}")
+
 MANIFEST = "MANIFEST.json"
 CHECK = "tools/manifest.py"
 PASS_STATUSES = {"clean", "protected"}
@@ -134,14 +140,14 @@ def consistency_failures(files: dict, rows: list[dict]) -> list[str]:
     for sha, paths in groups.items():
         if len(paths) < 2:
             continue
-        paths = sorted(paths)
-        classes = {str(files.get(p, {}).get("class", "generated")) for p in paths}
-        producers = {str(files.get(p, {}).get("producer", "<none>")) for p in paths}
-        if len(classes) < 2 and len(producers) < 2:
+        paths = sorted(p for p in paths if p in files)
+        if len(paths) < 2:
+            continue
+        if not provenance_mismatch([files[p] for p in paths]):
             continue
         detail = ", ".join(
-            f"{p} ({files.get(p, {}).get('class', 'generated')}"
-            f"/{files.get(p, {}).get('producer', '<none>')})" for p in paths)
+            f"{p} ({provenance(files[p])[0]}/{provenance(files[p])[1]})"
+            for p in paths)
         failures.append(f"byte-identical files disagree on class or producer "
                         f"(sha {short(sha)}): {detail}")
     return failures

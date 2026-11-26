@@ -153,6 +153,21 @@ def cmd_check(paths: list[str]) -> int:
     return rc
 
 
+def provenance(entry: dict) -> tuple[str, str]:
+    """The (class, producer) pair byte-identical files must share.
+
+    Shared with tools/manifest-gate.py so record-time refusal and the CI check
+    cannot drift apart: if one treats a pair as agreeing, so does the other.
+    """
+    return (str(entry.get("class", "generated")),
+            str(entry.get("producer", "<none>")))
+
+
+def provenance_mismatch(entries) -> bool:
+    """True when entries describing identical bytes disagree on provenance."""
+    return len({provenance(e) for e in entries}) > 1
+
+
 def twin_conflicts(d: dict, path: str, disk: str,
                    cls: str, producer: str) -> list[tuple[str, dict]]:
     """Other recorded paths whose worktree bytes equal this blob but whose
@@ -169,9 +184,7 @@ def twin_conflicts(d: dict, path: str, disk: str,
             continue
         if sha_worktree(other) != disk:
             continue
-        other_cls = entry.get("class", "generated")
-        other_producer = entry.get("producer", "<none>")
-        if other_cls != cls or other_producer != producer:
+        if provenance(entry) != (cls, producer):
             conflicts.append((other, entry))
     return sorted(conflicts, key=lambda item: item[0])
 
@@ -182,6 +195,7 @@ def cmd_record(paths: list[str], producer: str, cls: str | None, force: bool) ->
         print("refuse: repo is locked", file=sys.stderr)
         return RC_PROTECTED
     rc = RC_CLEAN
+    recorded = 0
     for path in paths:
         disk = sha_worktree(path)
         if disk is None:
@@ -209,8 +223,11 @@ def cmd_record(paths: list[str], producer: str, cls: str | None, force: bool) ->
             "sha": disk, "producer": producer,
             "class": new_cls, "at": now(),
         }
+        recorded += 1
         print(f"recorded {path} ({d['files'][path]['class']})")
-    save(d)
+    # A fully refused run must not bump `updated` or leave a spurious diff.
+    if recorded:
+        save(d)
     return rc
 
 

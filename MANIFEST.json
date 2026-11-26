@@ -117,10 +117,10 @@
       "at": "2026-11-25T08:50:57Z"
     },
     "tools/manifest-gate.py": {
-      "sha": "e12ca20b8bd558c6811e5c3deb40e45bc1d7a8c6",
+      "sha": "b7262973c3d2c1eba9a5b70a1b85688060259881",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-26T16:16:00Z"
+      "at": "2026-11-26T17:17:43Z"
     },
     ".github/FUNDING.yml": {
       "sha": "c9bc3bd42eff2e7c6c6d63d97d1a8c46b8083682",
@@ -291,11 +291,11 @@
       "at": "2026-11-26T12:00:00Z"
     },
     "tools/manifest.py": {
-      "sha": "4ee1d0f88bc4070afb9f1065928b5cf12572ad43",
+      "sha": "cc2642422908ecacf6d632faeccb874b36744e9e",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-26T16:30:16Z"
+      "at": "2026-11-26T17:17:43Z"
     }
   },
-  "updated": "2026-11-26T16:30:16Z"
+  "updated": "2026-11-26T17:17:43Z"
 }
