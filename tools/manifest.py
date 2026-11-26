@@ -153,6 +153,29 @@ def cmd_check(paths: list[str]) -> int:
     return rc
 
 
+def twin_conflicts(d: dict, path: str, disk: str,
+                   cls: str, producer: str) -> list[tuple[str, dict]]:
+    """Other recorded paths whose worktree bytes equal this blob but whose
+    class or producer differ from the entry being written.
+
+    Byte-identical copies must share one class and producer; otherwise the same
+    source is protected by one entry and regenerable under the other. Compared
+    against the other path's worktree sha, not its recorded sha, so a stale entry
+    cannot be blamed for a conflict its bytes do not have.
+    """
+    conflicts = []
+    for other, entry in d["files"].items():
+        if other == path:
+            continue
+        if sha_worktree(other) != disk:
+            continue
+        other_cls = entry.get("class", "generated")
+        other_producer = entry.get("producer", "<none>")
+        if other_cls != cls or other_producer != producer:
+            conflicts.append((other, entry))
+    return sorted(conflicts, key=lambda item: item[0])
+
+
 def cmd_record(paths: list[str], producer: str, cls: str | None, force: bool) -> int:
     d = load()
     if d.get("locked") and not force:
@@ -172,9 +195,19 @@ def cmd_record(paths: list[str], producer: str, cls: str | None, force: bool) ->
                   file=sys.stderr)
             rc = RC_PROTECTED
             continue
+        new_cls = cls or prev_cls or "generated"
+        conflicts = twin_conflicts(d, path, disk, new_cls, producer)
+        if conflicts and not force:
+            other, entry = conflicts[0]
+            print(f"refuse {path}: byte-identical to {other} "
+                  f"({entry.get('class', 'generated')}/{entry.get('producer', '<none>')}) "
+                  f"but this entry would be {new_cls}/{producer} "
+                  f"(use --force to override)", file=sys.stderr)
+            rc = RC_DRIFT
+            continue
         d["files"][path] = {
             "sha": disk, "producer": producer,
-            "class": cls or prev_cls or "generated", "at": now(),
+            "class": new_cls, "at": now(),
         }
         print(f"recorded {path} ({d['files'][path]['class']})")
     save(d)
@@ -243,7 +276,8 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("check", help="classify one or more paths")
     p.add_argument("paths", nargs="+")
-    p = sub.add_parser("record", help="record the current blob sha after a write")
+    p = sub.add_parser("record", help="record the current blob sha after a write "
+                                      "(refuses split provenance for identical bytes)")
     p.add_argument("paths", nargs="+")
     p.add_argument("--producer", required=True)
     p.add_argument("--class", dest="cls", default=None,
