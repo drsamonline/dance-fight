@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The manifest refusals are a test, not a habit.** `record` and `claim` refuse split provenance between
+  byte-identical files, a locked repo and reclassifying a protected entry, each overridable by `--force` —
+  but that was only ever checked by hand in throwaway clones. `tools/test-manifest.py` now builds a repo per
+  case, drives the shipped command line, and asserts the exit code and that a refused run leaves
+  `MANIFEST.json` byte-identical, so a refusal that stops refusing fails a check instead of a generator.
 - **Both arms survive every move, and read as arms.** The far arm's rim light was only ever checked in two frames
   of the finisher. `tools/frame-strip.mjs` samples every move against the groove — the pose the game actually
   resolves — and measures how much of the far arm is left once the torso, head and near limbs are drawn over it;

@@ -3,10 +3,10 @@
   "locked": false,
   "files": {
     "README.md": {
-      "sha": "dbdc1760eac5fd3e97a7915715fce916f384a681",
+      "sha": "1db85e1f08a132a8d6ff349c240d6ef5cdc790c0",
       "producer": "agent",
       "class": "generated",
-      "at": "2026-11-24T08:43:35Z"
+      "at": "2026-11-27T12:30:08Z"
     },
     "docs/index.html": {
       "sha": "34f37e265d7b418d63721d38440038f01d2605f4",
@@ -27,10 +27,10 @@
       "at": "2026-11-25T09:08:08Z"
     },
     "CHANGELOG.md": {
-      "sha": "408e130298b3f251f7906c8d86827736b69073c2",
+      "sha": "39cd7397c1774a16a71efc811f4303ad8b0f67ab",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-25T08:50:57Z"
+      "at": "2026-11-27T12:30:08Z"
     },
     "tools/contrast.py": {
       "sha": "72724051ccdfadd4fd67e28bcb7b9e76bee4d515",
@@ -295,7 +295,13 @@
       "producer": "agent",
       "class": "agent",
       "at": "2026-11-27T06:00:27Z"
+    },
+    "tools/test-manifest.py": {
+      "sha": "0b57e3eef17e6abfa72228caebb2b16a096b984a",
+      "producer": "agent",
+      "class": "agent",
+      "at": "2026-11-27T12:30:07Z"
     }
   },
-  "updated": "2026-11-27T06:00:27Z"
+  "updated": "2026-11-27T12:30:08Z"
 }
