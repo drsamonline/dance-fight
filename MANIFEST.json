@@ -291,11 +291,11 @@
       "at": "2026-11-26T12:00:00Z"
     },
     "tools/manifest.py": {
-      "sha": "6c556817abc0c237f1de8c252c3fdd954e1ea0d0",
+      "sha": "1f3321767d5d206c7e134175e4f4485c7ede35a4",
       "producer": "agent",
       "class": "agent",
-      "at": "2026-11-26T17:57:22Z"
+      "at": "2026-11-27T06:00:27Z"
     }
   },
-  "updated": "2026-11-26T17:57:22Z"
+  "updated": "2026-11-27T06:00:27Z"
 }

@@ -234,9 +234,23 @@ def cmd_record(paths: list[str], producer: str, cls: str | None, force: bool) ->
 def cmd_claim(path: str, cls: str, force: bool) -> int:
     if cls not in {"hand", "agent", "canonical", "generated"}:
         raise SystemExit(f"unknown class {cls}")
+    d = load()
+    # Same repo-level gate as record(): a locked repo refuses every write, checked
+    # before anything path-specific. --force is the one explicit override.
+    if d.get("locked") and not force:
+        print("refuse: repo is locked", file=sys.stderr)
+        return RC_PROTECTED
     if not (repo_root() / path).exists():
         raise SystemExit(f"refuse: {path} does not exist — cannot claim a missing file")
-    d = load()
+    prev_cls = d["files"].get(path, {}).get("class")
+    # claim() can reclassify any entry, including the pinned ones record() refuses to
+    # touch. Changing a protected class without --force would be the downgrade
+    # record() already forbids (e.g. canonical -> generated), so refuse it here too.
+    # A same-class claim (hand -> hand) is not a weakening and stays allowed.
+    if prev_cls in REFUSE_CLASSES and cls != prev_cls and not force:
+        print(f"refuse {path}: class={prev_cls} (use --force to override)",
+              file=sys.stderr)
+        return RC_PROTECTED
     entry = dict(d["files"].get(path, {}))
     entry["class"] = cls
     disk = sha_worktree(path)
