@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test-manifest.py — the refusals in tools/manifest.py, made permanent.
+"""test-manifest.py — the manifest refusals and the gate's checks, made permanent.
 
 `record` and `claim` both refuse the same four things: split provenance for
 byte-identical files, a locked repository, and reclassifying a protected entry,
@@ -7,9 +7,15 @@ each overridable by an explicit --force. Those rules were verified by hand in
 throwaway clones, so a refactor could reopen one of them and nothing would say
 so until a generator wrote through it.
 
+The gate has its own three: it must catch byte-identical files recorded with
+different provenance, a tracked file with no manifest entry, and a malformed
+MANIFEST.json (reported in one line, never a traceback). Each of those is the
+thing that would otherwise let drift reach a release.
+
 Every case below builds a throwaway git repo, copies in the shipped
-tools/manifest.py, and drives its real command line. No dependencies, no
-network, deterministic: the same tool always produces the same verdict.
+tools/manifest.py and tools/manifest-gate.py, and drives their real command
+lines. No dependencies, no network, deterministic: the same tool always
+produces the same verdict.
 
     python3 tools/test-manifest.py
 """
@@ -24,6 +30,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TOOL = HERE / "manifest.py"
+GATE = HERE / "manifest-gate.py"
 
 checks = 0
 failed = 0
@@ -64,6 +71,19 @@ def commit(repo: Path) -> None:
 
 def run(repo: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, "tools/manifest.py", *args],
+                          cwd=repo, capture_output=True, text=True)
+
+
+def make_gate_repo() -> Path:
+    """A committed repo carrying both tools, ready for the gate to read."""
+    repo = make_repo()
+    shutil.copy2(GATE, repo / "tools" / "manifest-gate.py")
+    commit(repo)
+    return repo
+
+
+def run_gate(repo: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, "tools/manifest-gate.py", *args],
                           cwd=repo, capture_output=True, text=True)
 
 
@@ -248,6 +268,65 @@ def test_claim_promote() -> None:
        r.stderr.strip())
 
 
+# ---- manifest-gate: split provenance, coverage, malformed manifest -------
+
+def test_gate_split_provenance() -> None:
+    repo = make_gate_repo()
+    # The gate's default run enforces coverage, so the tools themselves have to
+    # be recorded before a clean baseline exists.
+    run(repo, "record", "tools/manifest.py", "tools/manifest-gate.py",
+        "twin-a.txt", "twin-b.txt", "solo.txt", "--class", "generated", "--producer", "agent")
+    commit(repo)
+    clean = run_gate(repo)
+    ok("gate: a consistently recorded checkout passes",
+       clean.returncode == 0, f"exit {clean.returncode}: {clean.stderr.strip()}")
+
+    run(repo, "record", "twin-b.txt", "--class", "hand", "--producer", "agent",
+        "--force")
+    commit(repo)
+    r = run_gate(repo)
+    ok("gate: fails when byte-identical files disagree on provenance",
+       r.returncode == 1 and "byte-identical" in r.stderr, r.stderr.strip())
+    ok("gate: the split failure names every copy",
+       "twin-a.txt" in r.stderr and "twin-b.txt" in r.stderr, r.stderr.strip())
+    ok("gate: the split failure is not a worktree-drift report",
+       "does not match the checkout" not in r.stderr, r.stderr.strip())
+
+
+def test_gate_unrecorded_coverage() -> None:
+    repo = make_gate_repo()
+    run(repo, "record", "solo.txt", "--class", "hand", "--producer", "human")
+    commit(repo)
+    r = run_gate(repo)
+    ok("gate: fails on a tracked file with no manifest entry",
+       r.returncode == 1 and "unrecorded" in r.stderr, r.stderr.strip())
+    ok("gate: the coverage failure names the unrecorded files",
+       "twin-a.txt" in r.stderr and "twin-b.txt" in r.stderr, r.stderr.strip())
+    ok("gate: MANIFEST.json is exempt from its own coverage rule",
+       "MANIFEST.json: " not in r.stderr, r.stderr.strip())
+
+
+def test_gate_malformed_manifest() -> None:
+    repo = make_gate_repo()
+    run(repo, "record", "solo.txt", "twin-a.txt", "twin-b.txt",
+        "--class", "hand", "--producer", "human")
+    commit(repo)
+
+    (repo / "MANIFEST.json").write_text('{"files": {\n', encoding="utf-8")
+    broken = run_gate(repo)
+    ok("gate: an unparsable MANIFEST.json fails with a one-line error",
+       broken.returncode != 0 and "not valid JSON" in broken.stderr,
+       broken.stderr.strip())
+    ok("gate: an unparsable MANIFEST.json never prints a traceback",
+       "Traceback" not in broken.stderr, broken.stderr.strip())
+
+    (repo / "MANIFEST.json").write_text('[1, 2, 3]\n', encoding="utf-8")
+    shape = run_gate(repo)
+    ok("gate: a MANIFEST.json that is not an object fails in one line",
+       shape.returncode != 0 and "must be a JSON object" in shape.stderr
+       and "Traceback" not in shape.stderr, shape.stderr.strip())
+
+
 # ---- check: the exit codes the refusals share ----------------------------
 
 def test_check_codes() -> None:
@@ -286,6 +365,9 @@ def main() -> int:
         test_claim_same_class()
         test_claim_promote()
         test_check_codes()
+        test_gate_split_provenance()
+        test_gate_unrecorded_coverage()
+        test_gate_malformed_manifest()
     finally:
         for repo in repos:
             shutil.rmtree(repo, ignore_errors=True)

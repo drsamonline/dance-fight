@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **The gate's own checks are tested, and the harness runs in CI.** `tools/manifest-gate.py` is what stops a
+  drifting commit before a release, and its three failure modes — byte-identical files recorded with different
+  provenance, a tracked file with no manifest entry, and a malformed `MANIFEST.json` — were only ever seen by
+  hand. `tools/test-manifest.py` now drives the gate in throwaway repos and asserts each one fails, and the
+  one-line error never becomes a traceback. The `manifest` job runs the harness right after the gate, so the
+  refusals and the gate's checks are exercised on every push instead of when someone remembers.
 - **The manifest refusals are a test, not a habit.** `record` and `claim` refuse split provenance between
   byte-identical files, a locked repo and reclassifying a protected entry, each overridable by `--force` —
   but that was only ever checked by hand in throwaway clones. `tools/test-manifest.py` now builds a repo per

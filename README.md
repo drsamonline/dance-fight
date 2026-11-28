@@ -190,7 +190,7 @@ node tools/fight-check.mjs    # combat maths and a simulated round: damage, comb
 node tools/ver-check.mjs      # APP_VER matches the changelog and the worker's cache really is versioned
 node tools/frame-strip.mjs    # every move, both fighters: the far arm keeps a readable lit band, not a sliver
 python3 tools/contrast.py     # WCAG ratios for every ink/surface pair the theme block paints
-python3 tools/test-manifest.py  # manifest refusals: split provenance, lock, protected classes, --force
+python3 tools/test-manifest.py  # manifest refusals and the gate's own checks, tested in throwaway repos
 ```
 
 `rig-check` extracts the pure `RIG-LIB` block from the HTML and runs it in a sandbox — no browser, no
@@ -199,9 +199,11 @@ out of the page and drives them with a fake audio clock, so an inverted sign, or
 belongs, fails instead of quietly making every hit miss. `beat-check` synthesises tracks with a known
 tempo, first beat and silent intro and runs the same `analyzeBuffer` the game ships, so a doubled tempo or
 a phase half a beat out fails instead of just never feeling right. `contrast.py` reads the shipped CSS and
-fails if a label drops under AA. `test-manifest.py` drives `tools/manifest.py`'s own command line in
-throwaway repos — a record or claim that quietly stops refusing split provenance, a locked repo or a
-protected class fails here instead of in a generator. All of them exit non-zero, so any can gate a commit.
+fails if a label drops under AA. `test-manifest.py` drives `tools/manifest.py` and `tools/manifest-gate.py`
+in throwaway repos — a record or claim that quietly stops refusing split provenance, a locked repo or a
+protected class fails here instead of in a generator, and so does a gate that stops catching split
+provenance, an unrecorded tracked file, or a malformed `MANIFEST.json`. All of them exit non-zero, so any
+can gate a commit; the CI manifest job runs the gate and then this harness.
 
 ---
 
